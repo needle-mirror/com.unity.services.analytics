@@ -18,40 +18,40 @@ namespace Unity.Services.Analytics.Data
         {
             // Schema: http://go/UA2_SDKStart_v1
 
-            buf.PushStartEvent("sdkStart", datetime, 1);
+            buf.PushStartEvent("sdkStart", datetime, 1, true);
             buf.PushString(SdkVersion.SDK_VERSION, "sdkVersion");
 
-            // Event Params 
+            // Event Params
             commonParams.SerializeCommonEventParams(ref buf, callingMethodIdentifier);
             buf.PushString("com.unity.services.analytics", "sdkName"); // Schema: Required
-            
+
             buf.PushEndEvent();
         }
 
         internal static void GameRunning(ref Analytics.Internal.IBuffer buf, DateTime datetime, StdCommonParams commonParams, string callingMethodIdentifier)
         {
             // Schema: http://go/UA2_GameRunning_v1
-            
-            buf.PushStartEvent("gameRunning", datetime, 1);
-            
-            // Event Params 
+
+            buf.PushStartEvent("gameRunning", datetime, 1, true);
+
+            // Event Params
             commonParams.SerializeCommonEventParams(ref buf, callingMethodIdentifier);
-            
+
             buf.PushEndEvent();
         }
 
         internal static void NewPlayer(ref Analytics.Internal.IBuffer buf, DateTime datetime, StdCommonParams commonParams, string callingMethodIdentifier, string deviceModel)
         {
             // Schema: http://go/UA2_NewPlayer_v1
-            
-            buf.PushStartEvent("newPlayer", datetime, 1);
-            
-            // Event Params 
+
+            buf.PushStartEvent("newPlayer", datetime, 1, true);
+
+            // Event Params
             commonParams.SerializeCommonEventParams(ref buf, callingMethodIdentifier);
             // We aren't sending deviceBrand at the moment as deviceModel is sufficient.
             // UA1 did not send deviceBrand either. See JIRA-196 for more info.
             buf.PushString(deviceModel, "deviceModel"); // Schema: Optional
-            
+
             buf.PushEndEvent();
         }
 
@@ -66,14 +66,14 @@ namespace Unity.Services.Analytics.Data
             bool debugDevice,
             string userLocale)
         {
-            buf.PushStartEvent("gameStarted", datetime, 1);
-            
-            // Event Params 
+            buf.PushStartEvent("gameStarted", datetime, 1, true);
+
+            // Event Params
             commonParams.SerializeCommonEventParams(ref buf, callingMethodIdentifier);
-            
+
             // Schema: Required
             buf.PushString(userLocale, "userLocale");
-            
+
             // Schema: Optional
             if (!String.IsNullOrEmpty(idLocalProject))
             {
@@ -82,10 +82,10 @@ namespace Unity.Services.Analytics.Data
             buf.PushString(osVersion, "osVersion");
             buf.PushBool(isTiny, "isTiny");
             buf.PushBool(debugDevice, "debugDevice");
-            
+
             buf.PushEndEvent();
         }
-        
+
         // Keep the enum values in Caps!
         // We stringify the values.
         // These values aren't listed as an enum the Schema, but they are listed
@@ -97,18 +97,18 @@ namespace Unity.Services.Analytics.Data
             KILLEDINFOREGROUND,
             QUIT,
         }
-        
+
         internal static void GameEnded(ref Analytics.Internal.IBuffer buf, DateTime datetime, StdCommonParams commonParams, string callingMethodIdentifier, SessionEndState quitState)
         {
             // Schema: http://go/UA2_GameEnded_v1
-            
-            buf.PushStartEvent("gameEnded", datetime ,1);
-            
-            // Event Params 
+
+            buf.PushStartEvent("gameEnded", datetime , 1, true);
+
+            // Event Params
             commonParams.SerializeCommonEventParams(ref buf, callingMethodIdentifier);
-            
-	        buf.PushString(quitState.ToString(), "sessionEndState"); // Schema: Required
-            
+
+            buf.PushString(quitState.ToString(), "sessionEndState"); // Schema: Required
+
             buf.PushEndEvent();
         }
 
@@ -136,9 +136,9 @@ namespace Unity.Services.Analytics.Data
         {
             // Schema: http://go/UA2_AdImpression_v1
 
-            buf.PushStartEvent("adImpression", datetime, 1);
+            buf.PushStartEvent("adImpression", datetime, 1, true);
 
-            // Event Params 
+            // Event Params
             commonParams.SerializeCommonEventParams(ref buf, callingMethodIdentifier);
 
             // Schema: Required
@@ -219,13 +219,12 @@ namespace Unity.Services.Analytics.Data
             StdCommonParams commonParams,
             string callingMethodIdentifier,
             Events.TransactionParameters transactionParameters
-            )
+        )
         {
             // Schema: http://go/UA2_Transaction_v1
-            
-            buf.PushStartEvent("transaction", datetime, 1);
-            
-            // Event Params 
+
+            buf.PushStartEvent("transaction", datetime, 1, true);
+            // Event Params
             commonParams.SerializeCommonEventParams(ref buf, callingMethodIdentifier);
 
             if (!string.IsNullOrEmpty(SdkVersion.SDK_VERSION))
@@ -315,10 +314,10 @@ namespace Unity.Services.Analytics.Data
             Int64 screenHeight,
             Int64 screenDPI)
         {
-            buf.PushStartEvent("clientDevice", datetime, 1);
-            
+            buf.PushStartEvent("clientDevice", datetime, 1, true);
+
             commonParams.SerializeCommonEventParams(ref buf, callingMethodIdentifier);
-            
+
             // Schema: Optional
             buf.PushString(cpuType, "cpuType");
             buf.PushString(gpuType, "gpuType");
@@ -377,5 +376,5 @@ namespace Unity.Services.Analytics.Data
 
             buf.PushObjectEnd();
         }
-    }   
+    }
 }

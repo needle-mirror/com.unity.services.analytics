@@ -18,9 +18,11 @@ namespace Unity.Services.Analytics
         internal static IPlayerId PlayerId { get; private set; }
         internal static IInstallationId InstallId { get; private set; }
 
+        internal static string CustomAnalyticsId { get; private set; }
+
         internal static IBuffer dataBuffer = new Internal.Buffer();
         internal static IDispatcher dataDispatcher { get; set; }
-        
+
         public static IBuffer Buffer
         {
             get { return dataBuffer; }
@@ -32,7 +34,7 @@ namespace Unity.Services.Analytics
         /// opt out of data collection.
         /// </summary>
         public static readonly string PrivacyUrl = "https://unity3d.com/legal/privacy-policy";
-        
+
         static string s_CollectURL;
         static string s_SessionID;
         static Data.StdCommonParams s_CommonParams = new Data.StdCommonParams();
@@ -54,7 +56,7 @@ namespace Unity.Services.Analytics
             dataDispatcher = new Dispatcher(dataBuffer, ConsentTracker);
 
             s_SessionID = Guid.NewGuid().ToString();
-            
+
             s_CommonParams.ClientVersion = Application.version;
             s_CommonParams.ProjectID = Application.cloudProjectId;
             s_CommonParams.GameBundleID = Application.identifier;
@@ -63,21 +65,22 @@ namespace Unity.Services.Analytics
             s_CommonParams.Idfv = DeviceIdentifiersInternal.Idfv;
 
             SetVariableCommonParams();
-            
+
             DeviceIdentifiersInternal.SetupIdentifiers();
         }
 
-        internal static void SetDependencies(IInstallationId installId, IPlayerId playerId, string environment)
+        internal static void SetDependencies(IInstallationId installId, IPlayerId playerId, string environment, string customAnalyticsId)
         {
             InstallId = installId;
             PlayerId = playerId;
-            
+            CustomAnalyticsId = customAnalyticsId;
+
             s_CollectURL = String.Format(s_CollectUrlPattern, Application.cloudProjectId, environment.ToLowerInvariant());
         }
 
-        internal static async Task Initialize(IInstallationId installId, IPlayerId playerId, string environment)
+        internal static async Task Initialize(IInstallationId installId, IPlayerId playerId, string environment, string customAnalyticsId)
         {
-            SetDependencies(installId, playerId, environment);
+            SetDependencies(installId, playerId, environment, customAnalyticsId);
 
 #if UNITY_ANALYTICS_DEVELOPMENT
             Debug.LogFormat("UA2 Setup\nCollectURL:{0}\nSessionID:{1}", s_CollectURL, s_SessionID);
@@ -86,7 +89,7 @@ namespace Unity.Services.Analytics
             try
             {
                 await ConsentTracker.CheckGeoIP();
-                
+
                 if (ConsentTracker.IsGeoIpChecked() && (ConsentTracker.IsConsentDenied() || ConsentTracker.IsOptingOutInProgress()))
                 {
                     OptOut();
@@ -115,8 +118,8 @@ namespace Unity.Services.Analytics
         {
             try
             {
-                Debug.Log(ConsentTracker.IsConsentDenied() 
-                    ? "This user has opted out. Any cached events have been discarded and no more will be collected." 
+                Debug.Log(ConsentTracker.IsConsentDenied()
+                    ? "This user has opted out. Any cached events have been discarded and no more will be collected."
                     : "This user has opted out and is in the process of being forgotten...");
 
                 if (ConsentTracker.IsConsentGiven())
@@ -125,7 +128,7 @@ namespace Unity.Services.Analytics
                     // Thus we need to keep some of the dispatcher alive until that is done
                     ConsentTracker.BeginOptOutProcess();
                     RevokeWithForgetEvent();
-                    
+
                     return;
                 }
 
@@ -134,13 +137,13 @@ namespace Unity.Services.Analytics
                     RevokeWithForgetEvent();
                     return;
                 }
-                
+
                 Revoke();
                 ConsentTracker.SetDenyConsentToAll();
             }
             catch (Internal.ConsentCheckException e)
             {
-                throw new ConsentCheckException((ConsentCheckExceptionReason) e.Reason, e.ErrorCode, e.Message,
+                throw new ConsentCheckException((ConsentCheckExceptionReason)e.Reason, e.ErrorCode, e.Message,
                     e.InnerException);
             }
         }
@@ -231,7 +234,7 @@ namespace Unity.Services.Analytics
                 Flush();
             }
         }
-        
+
         /// <summary>
         /// Forces an immediately upload of all recorded events to the server, if there is an internet connection.
         /// </summary>
@@ -243,7 +246,7 @@ namespace Unity.Services.Analytics
                 #if UNITY_ANALYTICS_DEVELOPMENT
                 Debug.Log("The Core callback hasn't yet triggered.");
                 #endif
-                
+
                 return;
             }
 
@@ -251,19 +254,24 @@ namespace Unity.Services.Analytics
             {
                 if (ConsentTracker.IsGeoIpChecked() && ConsentTracker.IsConsentGiven())
                 {
-                    dataBuffer.UserID = InstallId.GetOrCreateIdentifier();
+                    dataBuffer.InstallID = InstallId.GetOrCreateIdentifier();
+                    dataBuffer.PlayerID = PlayerId?.PlayerId;
+
+                    dataBuffer.UserID = !string.IsNullOrEmpty(CustomAnalyticsId) ? CustomAnalyticsId : dataBuffer.InstallID;
+
                     dataBuffer.SessionID = s_SessionID;
                     dataDispatcher.CollectUrl = s_CollectURL;
                     dataDispatcher.Flush();
                 }
-                
+
                 if (ConsentTracker.IsOptingOutInProgress())
                 {
                     s_AnalyticsForgetter.AttemptToForget();
                 }
-            } catch (Internal.ConsentCheckException e)
+            }
+            catch (Internal.ConsentCheckException e)
             {
-                throw new ConsentCheckException((ConsentCheckExceptionReason) e.Reason, e.ErrorCode, e.Message,
+                throw new ConsentCheckException((ConsentCheckExceptionReason)e.Reason, e.ErrorCode, e.Message,
                     e.InnerException);
             }
         }
@@ -278,8 +286,7 @@ namespace Unity.Services.Analytics
 
         static void GameEnded(Data.Generator.SessionEndState quitState)
         {
-            Data.Generator.GameEnded(ref dataBuffer, DateTime.UtcNow, s_CommonParams,"com.unity.services.analytics.Events.GameEnded", quitState);
-	      }
-
+            Data.Generator.GameEnded(ref dataBuffer, DateTime.UtcNow, s_CommonParams, "com.unity.services.analytics.Events.GameEnded", quitState);
+        }
     }
 }

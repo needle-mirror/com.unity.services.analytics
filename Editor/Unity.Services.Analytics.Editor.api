@@ -3,7 +3,7 @@
 // make sure the XML doc file is present and located next to the scraped dll
 namespace Unity.Services.Analytics.Editor
 {
-    public struct AnalyticsIdentifier : Unity.Services.Core.Editor.IServiceIdentifier
+    public struct AnalyticsIdentifier : Unity.Services.Core.Editor.IEditorGameServiceIdentifier
     {
         public virtual string GetKey();
     }

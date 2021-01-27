@@ -1,0 +1,176 @@
+// This file is generated. Do not modify by hand.
+// XML documentation file not found. To check if public methods have XML comments,
+// make sure the XML doc file is present and located next to the scraped dll
+namespace Unity.Services.Analytics
+{
+    public class AnalyticsLifetime : UnityEngine.MonoBehaviour
+    {
+        public AnalyticsLifetime() {}
+    }
+
+    public class ConsentCheckException : Unity.Services.Core.RequestFailedException
+    {
+        [UnityEngine.Scripting.Preserve] public Unity.Services.Analytics.ConsentCheckExceptionReason Reason { get; }
+        public ConsentCheckException(Unity.Services.Analytics.ConsentCheckExceptionReason reason, int errorCode, string message, System.Exception innerException) {}
+    }
+
+    [UnityEngine.Scripting.Preserve] public enum ConsentCheckExceptionReason
+    {
+        public const Unity.Services.Analytics.ConsentCheckExceptionReason ConsentFlowNotKnown = 4;
+        public const Unity.Services.Analytics.ConsentCheckExceptionReason DeserializationIssue = 1;
+        public const Unity.Services.Analytics.ConsentCheckExceptionReason InvalidConsentFlow = 3;
+        public const Unity.Services.Analytics.ConsentCheckExceptionReason NoInternetConnection = 2;
+        public const Unity.Services.Analytics.ConsentCheckExceptionReason Unknown = 0;
+        public int value__;
+    }
+
+    public static class ContainerObject
+    {
+        public static void DestroyContainer();
+    }
+
+    public static class Events
+    {
+        public static readonly string PrivacyUrl;
+        public static Unity.Services.Analytics.Internal.IBuffer Buffer { get; }
+        public static void AdImpression(Unity.Services.Analytics.Events.AdImpressionArgs args);
+        [System.Diagnostics.DebuggerStepThrough] [System.Runtime.CompilerServices.AsyncStateMachine(typeof(Unity.Services.Analytics.Events.<CheckForRequiredConsents>d__5))] public static System.Threading.Tasks.Task<System.Collections.Generic.List<string>> CheckForRequiredConsents();
+        public static void CustomData(string eventName, System.Collections.Generic.IDictionary<string, object> eventParams);
+        public static void Flush();
+        public static void OptOut();
+        public static void ProvideOptInConsent(string identifier, bool consent);
+        public static void Transaction(Unity.Services.Analytics.Events.TransactionParameters transactionParameters);
+        public enum AdCompletionStatus
+        {
+            public const Unity.Services.Analytics.Events.AdCompletionStatus Completed = 0;
+            public const Unity.Services.Analytics.Events.AdCompletionStatus Incomplete = 2;
+            public const Unity.Services.Analytics.Events.AdCompletionStatus Partial = 1;
+            public int value__;
+        }
+        public class AdImpressionArgs
+        {
+            public Unity.Services.Analytics.Events.AdCompletionStatus AdCompletionStatus { get; set; }
+            public System.Nullable<double> AdEcpmUsd { get; set; }
+            public System.Nullable<bool> AdHasClicked { get; set; }
+            public string AdImpressionID { get; set; }
+            public System.Nullable<long> AdLengthMs { get; set; }
+            public string AdMediaType { get; set; }
+            public Unity.Services.Analytics.Events.AdProvider AdProvider { get; set; }
+            public string AdSource { get; set; }
+            public string AdStatusCallback { get; set; }
+            public string AdStoreDstID { get; set; }
+            public System.Nullable<long> AdTimeCloseButtonShownMs { get; set; }
+            public System.Nullable<long> AdTimeWatchedMs { get; set; }
+            public string PlacementID { get; set; }
+            public string PlacementName { get; set; }
+            public string PlacementType { get; set; }
+            public string SdkVersion { get; set; }
+            public AdImpressionArgs(Unity.Services.Analytics.Events.AdCompletionStatus adCompletionStatus, Unity.Services.Analytics.Events.AdProvider adProvider, string placementID, string placementName) {}
+        }
+        public enum AdProvider
+        {
+            public const Unity.Services.Analytics.Events.AdProvider AdColony = 0;
+            public const Unity.Services.Analytics.Events.AdProvider AdMob = 1;
+            public const Unity.Services.Analytics.Events.AdProvider Amazon = 2;
+            public const Unity.Services.Analytics.Events.AdProvider AppLovin = 3;
+            public const Unity.Services.Analytics.Events.AdProvider ChartBoost = 4;
+            public const Unity.Services.Analytics.Events.AdProvider Facebook = 5;
+            public const Unity.Services.Analytics.Events.AdProvider Fyber = 6;
+            public const Unity.Services.Analytics.Events.AdProvider Hyprmx = 7;
+            public const Unity.Services.Analytics.Events.AdProvider Inmobi = 8;
+            public const Unity.Services.Analytics.Events.AdProvider IrnSource = 14;
+            public const Unity.Services.Analytics.Events.AdProvider Maio = 9;
+            public const Unity.Services.Analytics.Events.AdProvider Other = 15;
+            public const Unity.Services.Analytics.Events.AdProvider Pangle = 10;
+            public const Unity.Services.Analytics.Events.AdProvider Tapjoy = 11;
+            public const Unity.Services.Analytics.Events.AdProvider UnityAds = 12;
+            public int value__;
+            public const Unity.Services.Analytics.Events.AdProvider Vungle = 13;
+        }
+        public struct Item
+        {
+            public long itemAmount;
+            public string itemName;
+            public string itemType;
+        }
+        public struct Product
+        {
+            public System.Collections.Generic.List<Unity.Services.Analytics.Events.Item> items;
+            public System.Nullable<Unity.Services.Analytics.Events.RealCurrency> realCurrency;
+            public System.Collections.Generic.List<Unity.Services.Analytics.Events.VirtualCurrency> virtualCurrencies;
+        }
+        public struct RealCurrency
+        {
+            public long realCurrencyAmount;
+            public string realCurrencyType;
+        }
+        public struct TransactionParameters
+        {
+            [System.Obsolete] public System.Nullable<bool> isInitiator;
+            public string paymentCountry;
+            public string productID;
+            public Unity.Services.Analytics.Events.Product productsReceived;
+            public Unity.Services.Analytics.Events.Product productsSpent;
+            public System.Nullable<long> revenueValidated;
+            public string storeID;
+            public string storeItemID;
+            public string storeItemSkuID;
+            public string storeSourceID;
+            public string transactionID;
+            public string transactionName;
+            public string transactionReceipt;
+            public string transactionReceiptSignature;
+            public System.Nullable<Unity.Services.Analytics.Events.TransactionServer> transactionServer;
+            public Unity.Services.Analytics.Events.TransactionType transactionType;
+            public string transactorID;
+        }
+        public enum TransactionServer
+        {
+            public const Unity.Services.Analytics.Events.TransactionServer AMAZON = 1;
+            public const Unity.Services.Analytics.Events.TransactionServer APPLE = 0;
+            public const Unity.Services.Analytics.Events.TransactionServer GOOGLE = 2;
+            public int value__;
+        }
+        public enum TransactionType
+        {
+            public const Unity.Services.Analytics.Events.TransactionType INVALID = 0;
+            public const Unity.Services.Analytics.Events.TransactionType PURCHASE = 2;
+            public const Unity.Services.Analytics.Events.TransactionType SALE = 1;
+            public const Unity.Services.Analytics.Events.TransactionType TRADE = 3;
+            public int value__;
+        }
+        public struct VirtualCurrency
+        {
+            public long virtualCurrencyAmount;
+            public string virtualCurrencyName;
+            public string virtualCurrencyType;
+        }
+    }
+
+    [System.Obsolete] public class NewPlayerHelper
+    {
+        [System.Obsolete] public NewPlayerHelper(Unity.Services.Core.Device.Internal.IInstallationId installId) {}
+        [System.Obsolete] public bool IsNewPlayer();
+    }
+
+    public static class SdkVersion
+    {
+        public static readonly string SDK_VERSION;
+    }
+}
+
+namespace Unity.Services.Analytics.Platform
+{
+    [System.Obsolete] public class DeviceIdentifiers
+    {
+        [System.Obsolete] public static string Idfa { get; }
+        [System.Obsolete] public static string Idfv { get; }
+        public DeviceIdentifiers() {}
+        [System.Obsolete] public static void SetupIdentifiers();
+    }
+
+    public static class Runtime
+    {
+        public static string Name();
+    }
+}

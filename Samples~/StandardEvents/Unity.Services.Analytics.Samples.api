@@ -1,0 +1,25 @@
+// This file is generated. Do not modify by hand.
+// XML documentation file not found. To check if public methods have XML comments,
+// make sure the XML doc file is present and located next to the scraped dll
+namespace Unity.Services.Analytics
+{
+    public static class CustomEventSample
+    {
+        public static void RecordCustomEventWithNoParameters();
+        public static void RecordCustomEventWithParameters();
+    }
+
+    public class StandardEventSample
+    {
+        public StandardEventSample() {}
+        public static void RecordCompleteAdImpressionEvent();
+        public static void RecordMinimalAdImpressionEvent();
+        public static void RecordSaleEventWithMultipleItems();
+        public static void RecordSaleEventWithOneItem();
+        public static void RecordSaleEventWithOptionalParameters();
+        public static void RecordSaleTransactionWithMultipleVirtualCurrencies();
+        public static void RecordSaleTransactionWithOnlyRequiredValues();
+        public static void RecordSaleTransactionWithRealCurrency();
+        public static void RecordSaleTransactionWithVirtualCurrency();
+    }
+}
