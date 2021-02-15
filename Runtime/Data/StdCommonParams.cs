@@ -26,7 +26,7 @@ namespace Unity.Services.Analytics.Data
         internal string UserCountry { get; set; }
         internal string ProjectID { get; set; }
 
-        internal void SerializeCommonEventParams(ref Analytics.Internal.IBuffer buf, string callingMethodIdentifier)
+        internal void SerializeCommonEventParams(ref Internal.IBuffer buf, string callingMethodIdentifier)
         {
             if (!string.IsNullOrEmpty(GameStoreID))
             {
@@ -57,7 +57,7 @@ namespace Unity.Services.Analytics.Data
                 // Schema: Optional
                 buf.PushString(Idfv, "idfv");
             }
-            
+
             if (!string.IsNullOrEmpty(UasUserID))
             {
                 // Schema: Optional
@@ -81,7 +81,7 @@ namespace Unity.Services.Analytics.Data
                 // Schema: Optional, IsEnum
                 buf.PushString(UserCountry, "userCountry");
             }
-            
+
             if (DeviceVolume != null)
             {
                 buf.PushDouble(DeviceVolume.Value, "deviceVolume"); // Schema: Optional
@@ -96,9 +96,9 @@ namespace Unity.Services.Analytics.Data
             {
                 buf.PushString(ProjectID, "projectID");
             }
-            
+
             // Schema: Required
-            buf.PushString(callingMethodIdentifier, "sdkMethod"); 
+            buf.PushString(callingMethodIdentifier, "sdkMethod");
         }
     }
 }

@@ -34,7 +34,7 @@ namespace Unity.Services.Analytics
             Inmobi,
             Maio,
             Pangle,
-            Tapjoy, 
+            Tapjoy,
             UnityAds,
             Vungle,
             IrnSource,
@@ -52,10 +52,10 @@ namespace Unity.Services.Analytics
             /// <param name="placementName">(Required) If there is a place in the game that can show Ads from multiple networks, there won’t be a single placementId. This field compensates for that by providing a single name for your placement. Ideally, this would be an easily human-readable name such as ‘revive’ or ‘daily bonus’. This value is here for reporting purposes only.</param>
             public AdImpressionArgs(AdCompletionStatus adCompletionStatus, AdProvider adProvider, string placementID, string placementName)
             {
-                this.AdCompletionStatus = adCompletionStatus;
-                this.AdProvider = adProvider;
-                this.PlacementID = placementID;
-                this.PlacementName = placementName;
+                AdCompletionStatus = adCompletionStatus;
+                AdProvider = adProvider;
+                PlacementID = placementID;
+                PlacementName = placementName;
             }
 
             /// <summary>
@@ -137,7 +137,7 @@ namespace Unity.Services.Analytics
             /// Optional.
             /// </summary>
             public string AdSource { get; set; }
-            
+
             /// <summary>
             /// Optional.
             /// </summary>
@@ -153,11 +153,11 @@ namespace Unity.Services.Analytics
             Debug.Assert(!string.IsNullOrEmpty(args.PlacementID), "Required to have a value.");
             Debug.Assert(!string.IsNullOrEmpty(args.PlacementName), "Required to have a value.");
 
-            string completionStatusString = args.AdCompletionStatus.ToString().ToUpper();
-            string adProviderString = args.AdProvider.ToString().ToUpper();
-            
+            var completionStatusString = args.AdCompletionStatus.ToString().ToUpper();
+            var adProviderString = args.AdProvider.ToString().ToUpper();
+
             Data.Generator.AdImpression(ref dataBuffer, DateTime.UtcNow, s_CommonParams, "com.unity.services.analytics.events.adimpression",
-                completionStatusString,  adProviderString, args.PlacementID, args.PlacementName, args.PlacementType, args.AdEcpmUsd, args.SdkVersion,
+                completionStatusString, adProviderString, args.PlacementID, args.PlacementName, args.PlacementType, args.AdEcpmUsd, args.SdkVersion,
                 args.AdImpressionID, args.AdStoreDstID, args.AdMediaType, args.AdTimeWatchedMs, args.AdTimeCloseButtonShownMs, args.AdLengthMs,
                 args.AdHasClicked, args.AdSource, args.AdStatusCallback);
         }

@@ -14,7 +14,7 @@ namespace Unity.Services.Analytics.Data
     /// </summary>
     static class Generator
     {
-        internal static void SdkStartup(ref Analytics.Internal.IBuffer buf, DateTime datetime, StdCommonParams commonParams, string callingMethodIdentifier)
+        internal static void SdkStartup(ref Internal.IBuffer buf, DateTime datetime, StdCommonParams commonParams, string callingMethodIdentifier)
         {
             // Schema: http://go/UA2_SDKStart_v1
 
@@ -28,7 +28,7 @@ namespace Unity.Services.Analytics.Data
             buf.PushEndEvent();
         }
 
-        internal static void GameRunning(ref Analytics.Internal.IBuffer buf, DateTime datetime, StdCommonParams commonParams, string callingMethodIdentifier)
+        internal static void GameRunning(ref Internal.IBuffer buf, DateTime datetime, StdCommonParams commonParams, string callingMethodIdentifier)
         {
             // Schema: http://go/UA2_GameRunning_v1
 
@@ -40,7 +40,7 @@ namespace Unity.Services.Analytics.Data
             buf.PushEndEvent();
         }
 
-        internal static void NewPlayer(ref Analytics.Internal.IBuffer buf, DateTime datetime, StdCommonParams commonParams, string callingMethodIdentifier, string deviceModel)
+        internal static void NewPlayer(ref Internal.IBuffer buf, DateTime datetime, StdCommonParams commonParams, string callingMethodIdentifier, string deviceModel)
         {
             // Schema: http://go/UA2_NewPlayer_v1
 
@@ -56,7 +56,7 @@ namespace Unity.Services.Analytics.Data
         }
 
         internal static void GameStarted(
-            ref Analytics.Internal.IBuffer buf,
+            ref Internal.IBuffer buf,
             DateTime datetime,
             StdCommonParams commonParams,
             string callingMethodIdentifier,
@@ -98,11 +98,11 @@ namespace Unity.Services.Analytics.Data
             QUIT,
         }
 
-        internal static void GameEnded(ref Analytics.Internal.IBuffer buf, DateTime datetime, StdCommonParams commonParams, string callingMethodIdentifier, SessionEndState quitState)
+        internal static void GameEnded(ref Internal.IBuffer buf, DateTime datetime, StdCommonParams commonParams, string callingMethodIdentifier, SessionEndState quitState)
         {
             // Schema: http://go/UA2_GameEnded_v1
 
-            buf.PushStartEvent("gameEnded", datetime , 1, true);
+            buf.PushStartEvent("gameEnded", datetime, 1, true);
 
             // Event Params
             commonParams.SerializeCommonEventParams(ref buf, callingMethodIdentifier);
@@ -113,7 +113,7 @@ namespace Unity.Services.Analytics.Data
         }
 
         internal static void AdImpression(
-            ref Analytics.Internal.IBuffer buf,
+            ref Internal.IBuffer buf,
             DateTime datetime,
             StdCommonParams commonParams,
             string callingMethodIdentifier,
@@ -214,7 +214,7 @@ namespace Unity.Services.Analytics.Data
         }
 
         internal static void Transaction(
-            ref Analytics.Internal.IBuffer buf,
+            ref Internal.IBuffer buf,
             DateTime datetime,
             StdCommonParams commonParams,
             string callingMethodIdentifier,
@@ -302,7 +302,7 @@ namespace Unity.Services.Analytics.Data
         }
 
         internal static void ClientDevice(
-            ref Analytics.Internal.IBuffer buf,
+            ref Internal.IBuffer buf,
             DateTime datetime,
             StdCommonParams commonParams,
             string callingMethodIdentifier,
@@ -330,7 +330,7 @@ namespace Unity.Services.Analytics.Data
             buf.PushEndEvent();
         }
 
-        static void SetProduct(ref Analytics.Internal.IBuffer buf, string productName, Events.Product product)
+        static void SetProduct(ref Internal.IBuffer buf, string productName, Events.Product product)
         {
             buf.PushObjectStart(productName);
 
@@ -345,7 +345,7 @@ namespace Unity.Services.Analytics.Data
             if (product.virtualCurrencies != null && product.virtualCurrencies.Count != 0)
             {
                 buf.PushArrayStart("virtualCurrencies");
-                foreach (Events.VirtualCurrency virtualCurrency in product.virtualCurrencies)
+                foreach (var virtualCurrency in product.virtualCurrencies)
                 {
                     buf.PushObjectStart();
                     buf.PushObjectStart("virtualCurrency");
@@ -361,7 +361,7 @@ namespace Unity.Services.Analytics.Data
             if (product.items != null && product.items.Count != 0)
             {
                 buf.PushArrayStart("items");
-                foreach (Events.Item item in product.items)
+                foreach (var item in product.items)
                 {
                     buf.PushObjectStart();
                     buf.PushObjectStart("item");

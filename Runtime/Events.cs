@@ -12,7 +12,7 @@ namespace Unity.Services.Analytics
 {
     public static partial class Events
     {
-        const string s_CollectUrlPattern = "https://collect.analytics.unity3d.com/collect/api/project/{0}/{1}";
+        const string k_CollectUrlPattern = "https://collect.analytics.unity3d.com/collect/api/project/{0}/{1}";
         const string k_ForgetCallingId = "com.unity.services.analytics.Events." + nameof(OptOut);
 
         internal static IPlayerId PlayerId { get; private set; }
@@ -23,10 +23,8 @@ namespace Unity.Services.Analytics
         internal static IBuffer dataBuffer = new Internal.Buffer();
         internal static IDispatcher dataDispatcher { get; set; }
 
-        public static IBuffer Buffer
-        {
-            get { return dataBuffer; }
-        }
+        [Obsolete("Use the provided event methods to send events - the buffer will be removed in a future release.")]
+        public static IBuffer Buffer => dataBuffer;
 
         /// <summary>
         /// This is the URL for the Unity Analytics privacy policy. This policy page should
@@ -36,10 +34,9 @@ namespace Unity.Services.Analytics
         public static readonly string PrivacyUrl = "https://unity3d.com/legal/privacy-policy";
 
         static string s_CollectURL;
-        static string s_SessionID;
-        static Data.StdCommonParams s_CommonParams = new Data.StdCommonParams();
-        static Ua2CoreInitializeCallback s_coreGlue = new Ua2CoreInitializeCallback();
-        static string s_StartUpCallingId = "com.unity.services.analytics.Events.Startup";
+        static readonly string s_SessionID;
+        static readonly Data.StdCommonParams s_CommonParams = new Data.StdCommonParams();
+        static readonly string s_StartUpCallingId = "com.unity.services.analytics.Events.Startup";
 
         internal static IAnalyticsForgetter s_AnalyticsForgetter;
 
@@ -60,7 +57,7 @@ namespace Unity.Services.Analytics
             s_CommonParams.ClientVersion = Application.version;
             s_CommonParams.ProjectID = Application.cloudProjectId;
             s_CommonParams.GameBundleID = Application.identifier;
-            s_CommonParams.Platform = Platform.Runtime.Name();
+            s_CommonParams.Platform = Runtime.Name();
             s_CommonParams.BuildGuuid = Application.buildGUID;
             s_CommonParams.Idfv = DeviceIdentifiersInternal.Idfv;
 
@@ -75,7 +72,7 @@ namespace Unity.Services.Analytics
             PlayerId = playerId;
             CustomAnalyticsId = customAnalyticsId;
 
-            s_CollectURL = String.Format(s_CollectUrlPattern, Application.cloudProjectId, environment.ToLowerInvariant());
+            s_CollectURL = String.Format(k_CollectUrlPattern, Application.cloudProjectId, environment.ToLowerInvariant());
         }
 
         internal static async Task Initialize(IInstallationId installId, IPlayerId playerId, string environment, string customAnalyticsId)
@@ -95,7 +92,7 @@ namespace Unity.Services.Analytics
                     OptOut();
                 }
             }
-            catch (Internal.ConsentCheckException e)
+            catch (ConsentCheckException e)
             {
 #if UNITY_ANALYTICS_EVENT_LOGS
                 Debug.Log("Initial GeoIP lookup fail: " + e.Message);
@@ -116,36 +113,28 @@ namespace Unity.Services.Analytics
         /// <exception cref="ConsentCheckException">Thrown if the required consent flow cannot be determined..</exception>
         public static void OptOut()
         {
-            try
+            Debug.Log(ConsentTracker.IsConsentDenied()
+                ? "This user has opted out. Any cached events have been discarded and no more will be collected."
+                : "This user has opted out and is in the process of being forgotten...");
+
+            if (ConsentTracker.IsConsentGiven())
             {
-                Debug.Log(ConsentTracker.IsConsentDenied()
-                    ? "This user has opted out. Any cached events have been discarded and no more will be collected."
-                    : "This user has opted out and is in the process of being forgotten...");
+                // We have revoked consent but have not yet sent the ForgetMe signal
+                // Thus we need to keep some of the dispatcher alive until that is done
+                ConsentTracker.BeginOptOutProcess();
+                RevokeWithForgetEvent();
 
-                if (ConsentTracker.IsConsentGiven())
-                {
-                    // We have revoked consent but have not yet sent the ForgetMe signal
-                    // Thus we need to keep some of the dispatcher alive until that is done
-                    ConsentTracker.BeginOptOutProcess();
-                    RevokeWithForgetEvent();
-
-                    return;
-                }
-
-                if (ConsentTracker.IsOptingOutInProgress())
-                {
-                    RevokeWithForgetEvent();
-                    return;
-                }
-
-                Revoke();
-                ConsentTracker.SetDenyConsentToAll();
+                return;
             }
-            catch (Internal.ConsentCheckException e)
+
+            if (ConsentTracker.IsOptingOutInProgress())
             {
-                throw new ConsentCheckException((ConsentCheckExceptionReason)e.Reason, e.ErrorCode, e.Message,
-                    e.InnerException);
+                RevokeWithForgetEvent();
+                return;
             }
+
+            Revoke();
+            ConsentTracker.SetDenyConsentToAll();
         }
 
         static void Revoke()
@@ -193,13 +182,13 @@ namespace Unity.Services.Analytics
             Data.Generator.SdkStartup(ref dataBuffer, DateTime.UtcNow, s_CommonParams, s_StartUpCallingId);
             Data.Generator.ClientDevice(ref dataBuffer, DateTime.UtcNow, s_CommonParams, s_StartUpCallingId, SystemInfo.processorType, SystemInfo.graphicsDeviceName, SystemInfo.processorCount, SystemInfo.systemMemorySize, Screen.width, Screen.height, (int)Screen.dpi);
 
-            #if UNITY_DOTSRUNTIME
+#if UNITY_DOTSRUNTIME
             bool isTiny = true;
-            #else
-            bool isTiny = false;
-            #endif
+#else
+            var isTiny = false;
+#endif
 
-            Data.Generator.GameStarted(ref dataBuffer, DateTime.UtcNow, s_CommonParams, s_StartUpCallingId, Application.buildGUID, SystemInfo.operatingSystem, isTiny, Platform.DebugDevice.IsDebugDevice(), Locale.AnalyticsRegionLanguageCode());
+            Data.Generator.GameStarted(ref dataBuffer, DateTime.UtcNow, s_CommonParams, s_StartUpCallingId, Application.buildGUID, SystemInfo.operatingSystem, isTiny, DebugDevice.IsDebugDevice(), Locale.AnalyticsRegionLanguageCode());
         }
 
         internal static void NewPlayerEvent()
@@ -241,38 +230,35 @@ namespace Unity.Services.Analytics
         /// <exception cref="ConsentCheckException">Thrown if the required consent flow cannot be determined..</exception>
         public static void Flush()
         {
+            if (string.IsNullOrEmpty(Application.cloudProjectId))
+            {
+                return;
+            }
+
             if (InstallId == null)
             {
-                #if UNITY_ANALYTICS_DEVELOPMENT
+#if UNITY_ANALYTICS_DEVELOPMENT
                 Debug.Log("The Core callback hasn't yet triggered.");
-                #endif
+#endif
 
                 return;
             }
 
-            try
+            if (ConsentTracker.IsGeoIpChecked() && ConsentTracker.IsConsentGiven())
             {
-                if (ConsentTracker.IsGeoIpChecked() && ConsentTracker.IsConsentGiven())
-                {
-                    dataBuffer.InstallID = InstallId.GetOrCreateIdentifier();
-                    dataBuffer.PlayerID = PlayerId?.PlayerId;
+                dataBuffer.InstallID = InstallId.GetOrCreateIdentifier();
+                dataBuffer.PlayerID = PlayerId?.PlayerId;
 
-                    dataBuffer.UserID = !string.IsNullOrEmpty(CustomAnalyticsId) ? CustomAnalyticsId : dataBuffer.InstallID;
+                dataBuffer.UserID = !string.IsNullOrEmpty(CustomAnalyticsId) ? CustomAnalyticsId : dataBuffer.InstallID;
 
-                    dataBuffer.SessionID = s_SessionID;
-                    dataDispatcher.CollectUrl = s_CollectURL;
-                    dataDispatcher.Flush();
-                }
-
-                if (ConsentTracker.IsOptingOutInProgress())
-                {
-                    s_AnalyticsForgetter.AttemptToForget();
-                }
+                dataBuffer.SessionID = s_SessionID;
+                dataDispatcher.CollectUrl = s_CollectURL;
+                dataDispatcher.Flush();
             }
-            catch (Internal.ConsentCheckException e)
+
+            if (ConsentTracker.IsOptingOutInProgress())
             {
-                throw new ConsentCheckException((ConsentCheckExceptionReason)e.Reason, e.ErrorCode, e.Message,
-                    e.InnerException);
+                s_AnalyticsForgetter.AttemptToForget();
             }
         }
 

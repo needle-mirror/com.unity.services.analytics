@@ -6,25 +6,27 @@ namespace Unity.Services.Analytics
     {
         public static void RecordMinimalAdImpressionEvent()
         {
-            Events.AdImpressionArgs args = new Events.AdImpressionArgs(Events.AdCompletionStatus.Completed, Events.AdProvider.UnityAds, "PLACEMENTID", "PLACEMENTNAME");
+            var args = new Events.AdImpressionArgs(Events.AdCompletionStatus.Completed, Events.AdProvider.UnityAds, "PLACEMENTID", "PLACEMENTNAME");
             Events.AdImpression(args);
         }
 
         public static void RecordCompleteAdImpressionEvent()
         {
-            Events.AdImpressionArgs args = new Events.AdImpressionArgs(Events.AdCompletionStatus.Completed, Events.AdProvider.UnityAds, "PLACEMENTID", "PLACEMENTNAME");
-            args.PlacementType = "PLACEMENTTYPE";
-            args.AdEcpmUsd = 123.4;
-            args.SdkVersion = "123.4";
-            args.AdImpressionID = "IMPRESSIVE";
-            args.AdStoreDstID = "DSTID";
-            args.AdMediaType = "MOVIE";
-            args.AdTimeWatchedMs = 1234;
-            args.AdTimeCloseButtonShownMs = 5678;
-            args.AdLengthMs = 2345;
-            args.AdHasClicked = false;
-            args.AdSource = "ADSRC";
-            args.AdStatusCallback = "STATCALL";
+            var args = new Events.AdImpressionArgs(Events.AdCompletionStatus.Completed, Events.AdProvider.UnityAds, "PLACEMENTID", "PLACEMENTNAME")
+            {
+                PlacementType = "PLACEMENTTYPE",
+                AdEcpmUsd = 123.4,
+                SdkVersion = "123.4",
+                AdImpressionID = "IMPRESSIVE",
+                AdStoreDstID = "DSTID",
+                AdMediaType = "MOVIE",
+                AdTimeWatchedMs = 1234,
+                AdTimeCloseButtonShownMs = 5678,
+                AdLengthMs = 2345,
+                AdHasClicked = false,
+                AdSource = "ADSRC",
+                AdStatusCallback = "STATCALL"
+            };
 
             Events.AdImpression(args);
         }
@@ -44,10 +46,14 @@ namespace Unity.Services.Analytics
         {
             Events.Transaction(new Events.TransactionParameters
             {
-                productsReceived = new Events.Product {
-                    realCurrency = new Events.RealCurrency() { realCurrencyType = "currencyType", realCurrencyAmount = 1337 } },
-                productsSpent = new Events.Product() {
-                    realCurrency = new Events.RealCurrency() { realCurrencyType = "currencyType", realCurrencyAmount = 1338 } },
+                productsReceived = new Events.Product
+                {
+                    realCurrency = new Events.RealCurrency() { realCurrencyType = "currencyType", realCurrencyAmount = 1337 }
+                },
+                productsSpent = new Events.Product()
+                {
+                    realCurrency = new Events.RealCurrency() { realCurrencyType = "currencyType", realCurrencyAmount = 1338 }
+                },
                 transactionName = "transactionName",
                 transactionType = Events.TransactionType.SALE
             });
@@ -57,16 +63,20 @@ namespace Unity.Services.Analytics
         {
             Events.Transaction(new Events.TransactionParameters
             {
-                productsReceived = new Events.Product {
+                productsReceived = new Events.Product
+                {
                     virtualCurrencies = new List<Events.VirtualCurrency>() {
                         new Events.VirtualCurrency() {
                             virtualCurrencyType = "PRcurrencyType", virtualCurrencyAmount = 1337, virtualCurrencyName = "PRcurrencyName" }
-                    } },
-                productsSpent = new Events.Product() {
+                    }
+                },
+                productsSpent = new Events.Product()
+                {
                     virtualCurrencies = new List<Events.VirtualCurrency>() {
                         new Events.VirtualCurrency() {
                             virtualCurrencyType = "PScurrencyType", virtualCurrencyAmount = 1338, virtualCurrencyName = "PScurrencyName" }
-                    } },
+                    }
+                },
                 transactionName = "transactionName",
                 transactionType = Events.TransactionType.SALE
             });
@@ -76,18 +86,24 @@ namespace Unity.Services.Analytics
         {
             Events.Transaction(new Events.TransactionParameters
             {
-                productsReceived = new Events.Product { virtualCurrencies = new List<Events.VirtualCurrency>() {
+                productsReceived = new Events.Product
+                {
+                    virtualCurrencies = new List<Events.VirtualCurrency>() {
                     new Events.VirtualCurrency() {
                         virtualCurrencyType = "PRcurrencyType1", virtualCurrencyAmount = 1337, virtualCurrencyName = "PRcurrencyName1" },
                     new Events.VirtualCurrency() {
                         virtualCurrencyType = "PRcurrencyType2", virtualCurrencyAmount = 1338, virtualCurrencyName = "PRcurrencyName2" },
-                } },
-                productsSpent = new Events.Product() { virtualCurrencies = new List<Events.VirtualCurrency>() {
+                }
+                },
+                productsSpent = new Events.Product()
+                {
+                    virtualCurrencies = new List<Events.VirtualCurrency>() {
                     new Events.VirtualCurrency() {
                         virtualCurrencyType = "PScurrencyType1", virtualCurrencyAmount = 1339, virtualCurrencyName = "PScurrencyName1" },
                     new Events.VirtualCurrency() {
                         virtualCurrencyType = "PScurrencyType2", virtualCurrencyAmount = 1340, virtualCurrencyName = "PScurrencyName2" },
-                } },
+                }
+                },
                 transactionName = "transactionName",
                 transactionType = Events.TransactionType.SALE
             });
@@ -97,10 +113,13 @@ namespace Unity.Services.Analytics
         {
             Events.Transaction(new Events.TransactionParameters
             {
-                productsReceived = new Events.Product { items = new List<Events.Item>() {
+                productsReceived = new Events.Product
+                {
+                    items = new List<Events.Item>() {
                     new Events.Item() {
                         itemName = "PRname", itemType = "PRtype", itemAmount = 1
-                       } } },
+                       } }
+                },
                 productsSpent = new Events.Product
                 {
                     items = new List<Events.Item>() {

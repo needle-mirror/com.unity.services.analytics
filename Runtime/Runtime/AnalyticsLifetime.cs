@@ -6,17 +6,17 @@ namespace Unity.Services.Analytics
     public class AnalyticsLifetime : MonoBehaviour
     {
         float m_Time = 0.0F;
-        
+
         void Awake()
         {
             hideFlags = HideFlags.NotEditable | HideFlags.DontSaveInEditor | HideFlags.DontSaveInBuild;
-            
-            #if !UNITY_ANALYTICS_DEVELOPMENT
+
+#if !UNITY_ANALYTICS_DEVELOPMENT
             hideFlags = hideFlags | HideFlags.HideInInspector;
-            #endif
-            
-            DontDestroyOnLoad(this.gameObject);
-            
+#endif
+
+            DontDestroyOnLoad(gameObject);
+
             // i hate this, but i don't know of a better way to know if we're running in a test..
             var mbs = FindObjectsOfType<MonoBehaviour>();
             foreach (var mb in mbs)
@@ -26,7 +26,7 @@ namespace Unity.Services.Analytics
                     return;
                 }
             }
-            
+
             Events.Startup();
         }
 
@@ -38,13 +38,13 @@ namespace Unity.Services.Analytics
             // Use unscaled time in case the user sets timeScale to anything other than 1 (e.g. to 0 to pause their game),
             // we always want to send events on the same real-time cadence regardless of framerate or user interference.
             m_Time += Time.unscaledDeltaTime;
-            
+
             if (m_Time >= 60.0F)
             {
                 Events.InternalTick();
                 m_Time = 0.0F;
             }
-            
+
         }
 
         void OnDestroy()
@@ -63,10 +63,10 @@ namespace Unity.Services.Analytics
         {
             if (!s_Created)
             {
-                #if UNITY_ANALYTICS_DEVELOPMENT
+#if UNITY_ANALYTICS_DEVELOPMENT
                 Debug.Log("Created Analytics Container");
-                #endif
-                
+#endif
+
                 s_Container = new GameObject("AnalyticsContainer");
                 s_Container.AddComponent<AnalyticsLifetime>();
 
@@ -76,7 +76,7 @@ namespace Unity.Services.Analytics
 
         public static void DestroyContainer()
         {
-            GameObject.Destroy(s_Container);
+            UnityEngine.Object.Destroy(s_Container);
             s_Created = false;
         }
     }

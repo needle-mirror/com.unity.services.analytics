@@ -1,13 +1,13 @@
 {
   "name": "com.unity.services.analytics",
   "displayName": "Analytics",
-  "version": "3.0.0-pre.3",
+  "version": "3.0.0-pre.4",
   "unity": "2019.4",
   "description": "The Unity Analytics package automatically collects core events and user properties when someone uses your game or application, and enables you to track specific in-game actions your user performs by defining custom events. The data collected from this package is surfaced in the Unity dashboard where you can use it to gather user insights, segment your player base and make informed decisions around the optimization of your game.",
   "documentationUrl": "https://docs.unity.com/analytics/",
   "dependencies": {
-    "com.unity.services.analytics-runtime": "2.0.0-pre.3",
-    "com.unity.ugui": "1.0.0"
+    "com.unity.ugui": "1.0.0",
+    "com.unity.services.core": "1.1.0-pre.69"
   },
   "samples": [
     {
@@ -36,15 +36,18 @@
       "Windows 10 Universal"
     ]
   },
+  "upm": {
+    "changelog": "* Fixed a bug where event data was not cached locally when the game closes,* Fixed a bug where floats were not serialized properly in cultures where the `,` character is used for decimals rather than `.`"
+  },
   "relatedPackages": {
-    "com.unity.services.analytics.tests": "3.0.0-pre.3"
+    "com.unity.services.analytics.tests": "3.0.0-pre.4"
   },
   "upmCi": {
-    "footprint": "f0ac70b6621b78199fb0ae0b6fe187485c75a8cf"
+    "footprint": "1e494b01bc16136b862e26851b811b355a2f496d"
   },
   "repository": {
     "url": "https://github.cds.internal.unity3d.com/unity/operate-services-sdk.git",
     "type": "git",
-    "revision": "7f8344d085d1d4cbbd4551c9ae769c0a40790166"
+    "revision": "6d3e2c0ebb6c49f4c23649809261a638f4a2108e"
   }
 }

@@ -35,7 +35,7 @@ namespace Unity.Services.Analytics.Platform
         {
             return GetPlatform().ToString();
         }
-        
+
         static UA2PlatformCode GetPlatform()
         {
             // NOTE: Assumes we're only supporting Unity LTS

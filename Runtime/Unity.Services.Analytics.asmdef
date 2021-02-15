@@ -3,8 +3,7 @@
     "references": [
         "Unity.Services.AnalyticsRuntime",
         "Unity.Services.Core",
-        "Unity.Services.Core.Internal",
-        "Unity.Services.Authentication"
+        "Unity.Services.Core.Internal"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

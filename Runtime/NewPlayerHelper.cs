@@ -13,11 +13,7 @@ namespace Unity.Services.Analytics
         [Obsolete]
         public NewPlayerHelper(IInstallationId installId)
         {
-            if (installId == null)
-            {
-                throw new ArgumentNullException("Did not get IInstallationId provider from Unity Services Core.");
-            }
-            InstallId = installId;
+            InstallId = installId ?? throw new ArgumentNullException("Did not get IInstallationId provider from Unity Services Core.");
         }
 
         [Obsolete]
@@ -25,7 +21,7 @@ namespace Unity.Services.Analytics
         {
             var coreIdentifier = InstallId.GetOrCreateIdentifier();
             var analyticsIdentifier = ReadAnalyticsIdentifier();
-            
+
             if (String.IsNullOrEmpty(analyticsIdentifier) || analyticsIdentifier != coreIdentifier)
             {
                 WriteAnalyticsIdentifierToFile(coreIdentifier);
@@ -54,18 +50,14 @@ namespace Unity.Services.Analytics
 
         internal InternalNewPlayerHelper(IInstallationId installId)
         {
-            if (installId == null)
-            {
-                throw new ArgumentNullException("Did not get IInstallationId provider from Unity Services Core.");
-            }
-            InstallId = installId;
+            InstallId = installId ?? throw new ArgumentNullException("Did not get IInstallationId provider from Unity Services Core.");
         }
 
         internal bool IsNewPlayer()
         {
             var coreIdentifier = InstallId.GetOrCreateIdentifier();
             var analyticsIdentifier = ReadAnalyticsIdentifier();
-            
+
             if (String.IsNullOrEmpty(analyticsIdentifier) || analyticsIdentifier != coreIdentifier)
             {
                 WriteAnalyticsIdentifierToFile(coreIdentifier);

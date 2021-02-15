@@ -4,11 +4,11 @@ namespace Unity.Services.Analytics.Platform
     {
         internal static bool IsDebugDevice()
         {
-            #if UNITY_EDITOR
+#if UNITY_EDITOR
             return true;
-            #else
+#else
             return false;
-            #endif
+#endif
         }
     }
 }

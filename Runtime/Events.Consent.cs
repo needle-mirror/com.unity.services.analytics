@@ -9,7 +9,7 @@ namespace Unity.Services.Analytics
     public static partial class Events
     {
         internal static IConsentTracker ConsentTracker = new ConsentTracker();
-        
+
         /// <summary>
         /// Returns identifiers of required consents we need to gather from the user
         /// in order to be allowed to sent analytics events.
@@ -18,39 +18,31 @@ namespace Unity.Services.Analytics
         /// If the required consent was already given, an empty list is returned.
         /// If the user already opted out from the current legislation, an empty list is returned.
         /// It involves the GeoIP call.
-        /// `ConsentCheckException` is thrown if the GeoIP call was unsuccessful. 
-        ///  
+        /// `ConsentCheckException` is thrown if the GeoIP call was unsuccessful.
+        ///
         /// </summary>
         /// <returns>A list of consent identifiers that are required for sending analytics events.</returns>
         /// <exception cref="ConsentCheckException">Thrown if the GeoIP call was unsuccessful.</exception>
         public static async Task<List<string>> CheckForRequiredConsents()
         {
-            try
-            {
-                GeoIPResponse response = await ConsentTracker.CheckGeoIP();
+            var response = await ConsentTracker.CheckGeoIP();
 
-                if (response.identifier == Consent.None)
-                {
-                    return new List<string>();
-                } 
-                
-                if (ConsentTracker.IsConsentDenied())
-                {
-                    return new List<string>();
-                } 
-                
-                if (!ConsentTracker.IsConsentGiven())
-                {
-                    return new List<string> { response.identifier };
-                }
-                
-                return new List<string>();
-                
-            }
-            catch (Analytics.Internal.ConsentCheckException e)
+            if (response.identifier == Consent.None)
             {
-                throw new ConsentCheckException((ConsentCheckExceptionReason)e.Reason, e.ErrorCode, e.Message, e.InnerException);
+                return new List<string>();
             }
+
+            if (ConsentTracker.IsConsentDenied())
+            {
+                return new List<string>();
+            }
+
+            if (!ConsentTracker.IsConsentGiven())
+            {
+                return new List<string> { response.identifier };
+            }
+
+            return new List<string>();
         }
 
         /// <summary>
@@ -58,7 +50,7 @@ namespace Unity.Services.Analytics
         /// The required legislation identifier can be found by calling `CheckForRequiredConsents` method.
         /// If this method is tried to be used for the incorrect legislation (PIPL outside China etc),
         /// the `ConsentCheckException` is thrown.
-        /// 
+        ///
         /// </summary>
         /// <param name="identifier">The legislation identifier for which the consent status should be changed.</param>
         /// <param name="consent">The consent status which should be set for the specified legislation.</param>
@@ -73,26 +65,20 @@ namespace Unity.Services.Analytics
                     "The required consent flow cannot be determined. Make sure CheckForRequiredConsents() method was successfully called.",
                     null);
             }
-            
-            try {
-                if (consent == false)
-                {
-                    if (ConsentTracker.IsConsentGiven(identifier))
-                    {
-                        ConsentTracker.BeginOptOutProcess(identifier);
-                        RevokeWithForgetEvent();
-                        return;
-                    }
-                    
-                    Revoke();
-                }
-                
-                ConsentTracker.SetUserConsentStatus(identifier, consent);
-            }
-            catch (Analytics.Internal.ConsentCheckException e)
+
+            if (consent == false)
             {
-                throw new ConsentCheckException((ConsentCheckExceptionReason)e.Reason, e.ErrorCode, e.Message, e.InnerException);
+                if (ConsentTracker.IsConsentGiven(identifier))
+                {
+                    ConsentTracker.BeginOptOutProcess(identifier);
+                    RevokeWithForgetEvent();
+                    return;
+                }
+
+                Revoke();
             }
+
+            ConsentTracker.SetUserConsentStatus(identifier, consent);
         }
     }
 }

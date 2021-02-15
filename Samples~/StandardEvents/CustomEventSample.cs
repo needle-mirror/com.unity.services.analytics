@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace Unity.Services.Analytics
@@ -9,10 +9,10 @@ namespace Unity.Services.Analytics
         {
             Events.CustomData("myEvent", new Dictionary<string, object>());
         }
-        
+
         public static void RecordCustomEventWithParameters()
         {
-            Dictionary<string, object> parameters = new Dictionary<string, object>()
+            var parameters = new Dictionary<string, object>()
             {
                 { "fabulousString", "hello there" },
                 { "sparklingInt", 1337 },
@@ -22,7 +22,7 @@ namespace Unity.Services.Analytics
                 { "peculiarBool", true },
                 { "ultimateTimestamp", DateTime.UtcNow }
             };
-            
+
             Events.CustomData("myEvent", parameters);
         }
     }

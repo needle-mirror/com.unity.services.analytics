@@ -4,6 +4,11 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [3.0.0-pre.4] - 2021-02-15
+
+* Fixed a bug where event data was not cached locally when the game closes
+* Fixed a bug where floats were not serialized properly in cultures where the `,` character is used for decimals rather than `.`
+
 ## [3.0.0-pre.3] - 2021-01-27
 
 * Adds support for using a custom analytics ID via the Core SDK.

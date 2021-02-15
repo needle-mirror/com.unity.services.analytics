@@ -32,7 +32,7 @@ namespace Unity.Services.Analytics
     public static class Events
     {
         public static readonly string PrivacyUrl;
-        public static Unity.Services.Analytics.Internal.IBuffer Buffer { get; }
+        [System.Obsolete(@"Use the provided event methods to send events - the buffer will be removed in a future release.")] public static Unity.Services.Analytics.Internal.IBuffer Buffer { get; }
         public static void AdImpression(Unity.Services.Analytics.Events.AdImpressionArgs args);
         [System.Diagnostics.DebuggerStepThrough] [System.Runtime.CompilerServices.AsyncStateMachine(typeof(Unity.Services.Analytics.Events.<CheckForRequiredConsents>d__5))] public static System.Threading.Tasks.Task<System.Collections.Generic.List<string>> CheckForRequiredConsents();
         public static void CustomData(string eventName, System.Collections.Generic.IDictionary<string, object> eventParams);
@@ -156,6 +156,130 @@ namespace Unity.Services.Analytics
     public static class SdkVersion
     {
         public static readonly string SDK_VERSION;
+    }
+}
+
+namespace Unity.Services.Analytics.Internal
+{
+    [System.Obsolete(@"Don't interact with the buffer directly - use the methods on the Events class to send events instead. This will be removed in a future release")] public class Buffer : Unity.Services.Analytics.Internal.IBuffer
+    {
+        public virtual string InstallID { get; set; }
+        public virtual string PlayerID { get; set; }
+        public virtual string SessionID { get; set; }
+        public virtual string UserID { get; set; }
+        public Buffer() {}
+        public virtual void ClearBuffer();
+        public virtual void ClearDiskCache();
+        public virtual System.Collections.Generic.List<Unity.Services.Analytics.Internal.Buffer.Token> CloneTokens();
+        public virtual void FlushToDisk();
+        public virtual void InsertTokens(System.Collections.Generic.List<Unity.Services.Analytics.Internal.Buffer.Token> tokens);
+        public virtual void LoadFromDisk();
+        public virtual void PushArrayEnd();
+        public virtual void PushArrayStart(string name = default(string));
+        public virtual void PushBool(bool val, string name = default(string));
+        public virtual void PushDouble(double val, string name = default(string));
+        public virtual void PushEndEvent();
+        public virtual void PushEvent(Unity.Services.Analytics.Internal.Event evt);
+        public virtual void PushFloat(float val, string name = default(string));
+        public virtual void PushInt(int val, string name = default(string));
+        public virtual void PushInt64(long val, string name = default(string));
+        public virtual void PushObjectEnd();
+        public virtual void PushObjectStart(string name = default(string));
+        public virtual void PushStartEvent(string name, System.DateTime datetime, System.Nullable<long> eventVersion, bool addPlayerIdsToEventBody = False);
+        public virtual void PushString(string val, string name = default(string));
+        public virtual void PushTimestamp(System.DateTime val, string name);
+        public static string SaveDateTime(System.DateTime dateTime);
+        public virtual string Serialize(System.Collections.Generic.List<Unity.Services.Analytics.Internal.Buffer.Token> tokens);
+        [System.Obsolete(@"Don't interact with the buffer tokens directly - use the methods on the Events class to send events instead. This will be removed in a future release")] public struct Token
+        {
+            public object Data;
+            public string Name;
+            public Unity.Services.Analytics.Internal.Buffer.TokenType Type;
+        }
+        [System.Obsolete(@"Don't interact with the buffer tokens directly - use the methods on the Events class to send events instead. This will be removed in a future release")] public enum TokenType
+        {
+            public const Unity.Services.Analytics.Internal.Buffer.TokenType Boolean = 8;
+            public const Unity.Services.Analytics.Internal.Buffer.TokenType EventArrayEnd = 7;
+            public const Unity.Services.Analytics.Internal.Buffer.TokenType EventArrayStart = 6;
+            public const Unity.Services.Analytics.Internal.Buffer.TokenType EventEnd = 1;
+            public const Unity.Services.Analytics.Internal.Buffer.TokenType EventObjectEnd = 5;
+            public const Unity.Services.Analytics.Internal.Buffer.TokenType EventObjectStart = 4;
+            public const Unity.Services.Analytics.Internal.Buffer.TokenType EventParamsEnd = 3;
+            public const Unity.Services.Analytics.Internal.Buffer.TokenType EventParamsStart = 2;
+            public const Unity.Services.Analytics.Internal.Buffer.TokenType EventStart = 0;
+            public const Unity.Services.Analytics.Internal.Buffer.TokenType EventTimestamp = 13;
+            public const Unity.Services.Analytics.Internal.Buffer.TokenType Float64 = 9;
+            public const Unity.Services.Analytics.Internal.Buffer.TokenType Int64 = 11;
+            public const Unity.Services.Analytics.Internal.Buffer.TokenType StandardEventIds = 14;
+            public const Unity.Services.Analytics.Internal.Buffer.TokenType String = 10;
+            public const Unity.Services.Analytics.Internal.Buffer.TokenType Timestamp = 12;
+            public int value__;
+        }
+    }
+
+    public class Event
+    {
+        public string Name { get; }
+        public Unity.Services.Analytics.Internal.EventData Parameters { get; }
+        public System.Nullable<int> Version { get; }
+        public Event(string name, System.Nullable<int> version) {}
+    }
+
+    public class EventData
+    {
+        public System.Collections.Generic.Dictionary<string, object> Data { get; }
+        public void AddBatteryLoad();
+        public void AddBuildGuuid();
+        public void AddClientVersion();
+        public void AddConnectionType();
+        public void AddGameBundleID();
+        public void AddPlatform();
+        public void AddStdParamData(string sdkMethod, string uasID);
+        public void AddUserCountry();
+        public void Set(string key, bool value);
+        public void Set(string key, double value);
+        public void Set(string key, int value);
+        public void Set(string key, long value);
+        public void Set(string key, object value);
+        public void Set(string key, float value);
+        public void Set(string key, string value);
+    }
+
+    [System.Obsolete(@"Don't interact with the buffer directly - use the methods on the Events class to send events instead. This will be removed in a future release")] public interface IBuffer
+    {
+        public abstract string InstallID { get; set; }
+        public abstract string PlayerID { get; set; }
+        public abstract string SessionID { get; set; }
+        public abstract string UserID { get; set; }
+        public abstract void ClearBuffer();
+        public abstract void ClearDiskCache();
+        public abstract System.Collections.Generic.List<Unity.Services.Analytics.Internal.Buffer.Token> CloneTokens();
+        public abstract void FlushToDisk();
+        public abstract void InsertTokens(System.Collections.Generic.List<Unity.Services.Analytics.Internal.Buffer.Token> tokens);
+        public abstract void LoadFromDisk();
+        public abstract void PushArrayEnd();
+        public abstract void PushArrayStart(string name = default(string));
+        public abstract void PushBool(bool val, string name = default(string));
+        public abstract void PushDouble(double val, string name = default(string));
+        public abstract void PushEndEvent();
+        public abstract void PushEvent(Unity.Services.Analytics.Internal.Event evt);
+        public abstract void PushFloat(float val, string name = default(string));
+        public abstract void PushInt(int val, string name = default(string));
+        public abstract void PushInt64(long val, string name = default(string));
+        public abstract void PushObjectEnd();
+        public abstract void PushObjectStart(string name = default(string));
+        public abstract void PushStartEvent(string name, System.DateTime datetime, System.Nullable<long> eventVersion, bool addPlayerIdsToEventBody = False);
+        public abstract void PushString(string val, string name = default(string));
+        public abstract void PushTimestamp(System.DateTime val, string name = default(string));
+        public abstract string Serialize(System.Collections.Generic.List<Unity.Services.Analytics.Internal.Buffer.Token> tokens);
+    }
+}
+
+namespace Unity.Services.Analytics.Internal.Platform
+{
+    public static class UserCountry
+    {
+        public static string Name();
     }
 }
 
