@@ -3,9 +3,86 @@
 // make sure the XML doc file is present and located next to the scraped dll
 namespace Unity.Services.Analytics
 {
+    public class AcquisitionSourceParameters
+    {
+        public string CampaignId;
+        public string CampaignName;
+        public string CampaignType;
+        public string Channel;
+        public System.Nullable<float> Cost;
+        public string CostCurrency;
+        public string CreativeId;
+        public string Network;
+        public string Provider;
+        public AcquisitionSourceParameters() {}
+    }
+
+    public enum AdCompletionStatus
+    {
+        public const Unity.Services.Analytics.AdCompletionStatus Completed = 0;
+        public const Unity.Services.Analytics.AdCompletionStatus Incomplete = 2;
+        public const Unity.Services.Analytics.AdCompletionStatus Partial = 1;
+        public int value__;
+    }
+
+    public struct AdImpressionParameters
+    {
+        public Unity.Services.Analytics.AdCompletionStatus AdCompletionStatus;
+        public System.Nullable<double> AdEcpmUsd;
+        public System.Nullable<bool> AdHasClicked;
+        public string AdImpressionID;
+        public System.Nullable<long> AdLengthMs;
+        public string AdMediaType;
+        public Unity.Services.Analytics.AdProvider AdProvider;
+        public string AdSource;
+        public string AdStatusCallback;
+        public string AdStoreDstID;
+        public System.Nullable<long> AdTimeCloseButtonShownMs;
+        public System.Nullable<long> AdTimeWatchedMs;
+        public string PlacementID;
+        public string PlacementName;
+        public System.Nullable<Unity.Services.Analytics.AdPlacementType> PlacementType;
+        public string SdkVersion;
+    }
+
+    public enum AdPlacementType
+    {
+        public const Unity.Services.Analytics.AdPlacementType BANNER = 0;
+        public const Unity.Services.Analytics.AdPlacementType INTERSTITIAL = 2;
+        public const Unity.Services.Analytics.AdPlacementType OTHER = 3;
+        public const Unity.Services.Analytics.AdPlacementType REWARDED = 1;
+        public int value__;
+    }
+
+    public enum AdProvider
+    {
+        public const Unity.Services.Analytics.AdProvider AdColony = 0;
+        public const Unity.Services.Analytics.AdProvider AdMob = 1;
+        public const Unity.Services.Analytics.AdProvider Amazon = 2;
+        public const Unity.Services.Analytics.AdProvider AppLovin = 3;
+        public const Unity.Services.Analytics.AdProvider ChartBoost = 4;
+        public const Unity.Services.Analytics.AdProvider Facebook = 5;
+        public const Unity.Services.Analytics.AdProvider Fyber = 6;
+        public const Unity.Services.Analytics.AdProvider Hyprmx = 7;
+        public const Unity.Services.Analytics.AdProvider Inmobi = 8;
+        public const Unity.Services.Analytics.AdProvider IrnSource = 14;
+        public const Unity.Services.Analytics.AdProvider Maio = 9;
+        public const Unity.Services.Analytics.AdProvider Other = 15;
+        public const Unity.Services.Analytics.AdProvider Pangle = 10;
+        public const Unity.Services.Analytics.AdProvider Tapjoy = 11;
+        public const Unity.Services.Analytics.AdProvider UnityAds = 12;
+        public int value__;
+        public const Unity.Services.Analytics.AdProvider Vungle = 13;
+    }
+
     public class AnalyticsLifetime : UnityEngine.MonoBehaviour
     {
         public AnalyticsLifetime() {}
+    }
+
+    public static class AnalyticsService
+    {
+        public static Unity.Services.Analytics.IAnalyticsService Instance { get; }
     }
 
     public class ConsentCheckException : Unity.Services.Core.RequestFailedException
@@ -29,25 +106,24 @@ namespace Unity.Services.Analytics
         public static void DestroyContainer();
     }
 
-    public static class Events
+    [System.Obsolete(@"The interface provided by this static class has moved to AnalyticsService.Instance, and should be accessed from there instead. This API will be removed in an upcoming release.")] public static class Events
     {
-        public static readonly string PrivacyUrl;
-        [System.Obsolete(@"Use the provided event methods to send events - the buffer will be removed in a future release.")] public static Unity.Services.Analytics.Internal.IBuffer Buffer { get; }
-        public static void AdImpression(Unity.Services.Analytics.Events.AdImpressionArgs args);
-        [System.Diagnostics.DebuggerStepThrough] [System.Runtime.CompilerServices.AsyncStateMachine(typeof(Unity.Services.Analytics.Events.<CheckForRequiredConsents>d__5))] public static System.Threading.Tasks.Task<System.Collections.Generic.List<string>> CheckForRequiredConsents();
-        public static void CustomData(string eventName, System.Collections.Generic.IDictionary<string, object> eventParams);
-        public static void Flush();
-        public static void OptOut();
-        public static void ProvideOptInConsent(string identifier, bool consent);
-        public static void Transaction(Unity.Services.Analytics.Events.TransactionParameters transactionParameters);
-        public enum AdCompletionStatus
+        [System.Obsolete(@"The interface provided by this field has moved to AnalyticsService.Instance.PrivacyUrl, and should be accessed from there instead. This API will be removed in an upcoming release.")] public static readonly string PrivacyUrl;
+        [System.Obsolete(@"The interface provided by this method has moved to AnalyticsService.Instance.AdImpression, and should be accessed from there instead. This API will be removed in an upcoming release.")] public static void AdImpression(Unity.Services.Analytics.Events.AdImpressionArgs args);
+        [System.Diagnostics.DebuggerStepThrough] [System.Obsolete(@"The interface provided by this method has moved to AnalyticsService.Instance.CheckForRequiredConsents, and should be accessed from there instead. This API will be removed in an upcoming release.")] [System.Runtime.CompilerServices.AsyncStateMachine(typeof(Unity.Services.Analytics.Events.<CheckForRequiredConsents>d__4))] public static System.Threading.Tasks.Task<System.Collections.Generic.List<string>> CheckForRequiredConsents();
+        [System.Obsolete(@"The interface provided by this method has moved to AnalyticsService.Instance.CustomData, and should be accessed from there instead. This API will be removed in an upcoming release.")] public static void CustomData(string eventName, System.Collections.Generic.IDictionary<string, object> eventParams);
+        [System.Obsolete(@"The interface provided by this method has moved to AnalyticsService.Instance.Flush, and should be accessed from there instead. This API will be removed in an upcoming release.")] public static void Flush();
+        [System.Obsolete(@"The interface provided by this method has moved to AnalyticsService.Instance.OptOut, and should be accessed from there instead. This API will be removed in an upcoming release.")] public static void OptOut();
+        [System.Obsolete(@"The interface provided by this method has moved to AnalyticsService.Instance.ProvideOptInConsent, and should be accessed from there instead. This API will be removed in an upcoming release.")] public static void ProvideOptInConsent(string identifier, bool consent);
+        [System.Obsolete(@"The interface provided by this method has moved to AnalyticsService.Instance.Transaction, and should be accessed from there instead. This API will be removed in an upcoming release.")] public static void Transaction(Unity.Services.Analytics.Events.TransactionParameters transactionParameters);
+        [System.Obsolete(@"This enum has been moved outside the Events class. Please use that instead. This enum will be removed in an upcoming release.")] public enum AdCompletionStatus
         {
             public const Unity.Services.Analytics.Events.AdCompletionStatus Completed = 0;
             public const Unity.Services.Analytics.Events.AdCompletionStatus Incomplete = 2;
             public const Unity.Services.Analytics.Events.AdCompletionStatus Partial = 1;
             public int value__;
         }
-        public class AdImpressionArgs
+        [System.Obsolete(@"This class has been aligned with other interfaces. Please use AdImpressionParameters with the AnalyticsService.Instance API instead. This class will be removed in an upcoming release")] public class AdImpressionArgs
         {
             public Unity.Services.Analytics.Events.AdCompletionStatus AdCompletionStatus { get; set; }
             public System.Nullable<double> AdEcpmUsd { get; set; }
@@ -67,7 +143,7 @@ namespace Unity.Services.Analytics
             public string SdkVersion { get; set; }
             public AdImpressionArgs(Unity.Services.Analytics.Events.AdCompletionStatus adCompletionStatus, Unity.Services.Analytics.Events.AdProvider adProvider, string placementID, string placementName) {}
         }
-        public enum AdProvider
+        [System.Obsolete(@"This enum has been moved outside the Events class. Please use that instead. This enum will be removed in an upcoming release.")] public enum AdProvider
         {
             public const Unity.Services.Analytics.Events.AdProvider AdColony = 0;
             public const Unity.Services.Analytics.Events.AdProvider AdMob = 1;
@@ -87,24 +163,24 @@ namespace Unity.Services.Analytics
             public int value__;
             public const Unity.Services.Analytics.Events.AdProvider Vungle = 13;
         }
-        public struct Item
+        [System.Obsolete(@"This struct has been moved outside the Events class, and it's parameters now conform to C# guidelines. Please use the standalone struct instead. This struct will be removed in an upcoming release.")] public struct Item
         {
             public long itemAmount;
             public string itemName;
             public string itemType;
         }
-        public struct Product
+        [System.Obsolete(@"This struct has been moved outside the Events class, and it's parameters now conform to C# guidelines. Please use the standalone struct instead. This struct will be removed in an upcoming release.")] public struct Product
         {
             public System.Collections.Generic.List<Unity.Services.Analytics.Events.Item> items;
             public System.Nullable<Unity.Services.Analytics.Events.RealCurrency> realCurrency;
             public System.Collections.Generic.List<Unity.Services.Analytics.Events.VirtualCurrency> virtualCurrencies;
         }
-        public struct RealCurrency
+        [System.Obsolete(@"This struct has been moved outside the Events class, and it's parameters now conform to C# guidelines. Please use the standalone struct instead. This struct will be removed in an upcoming release.")] public struct RealCurrency
         {
             public long realCurrencyAmount;
             public string realCurrencyType;
         }
-        public struct TransactionParameters
+        [System.Obsolete(@"This struct has been moved outside the Events class, and it's parameters now conform to C# guidelines. Please use the standalone struct instead. This struct will be removed in an upcoming release.")] public struct TransactionParameters
         {
             [System.Obsolete] public System.Nullable<bool> isInitiator;
             public string paymentCountry;
@@ -124,14 +200,14 @@ namespace Unity.Services.Analytics
             public Unity.Services.Analytics.Events.TransactionType transactionType;
             public string transactorID;
         }
-        public enum TransactionServer
+        [System.Obsolete(@"This enum has been moved outside the Events class, the standalone enum should be used instead. This enum will be removed in an upcoming release.")] public enum TransactionServer
         {
             public const Unity.Services.Analytics.Events.TransactionServer AMAZON = 1;
             public const Unity.Services.Analytics.Events.TransactionServer APPLE = 0;
             public const Unity.Services.Analytics.Events.TransactionServer GOOGLE = 2;
             public int value__;
         }
-        public enum TransactionType
+        [System.Obsolete(@"This enum has been moved outside the Events class, the standalone enum should be used instead. This enum will be removed in an upcoming release.")] public enum TransactionType
         {
             public const Unity.Services.Analytics.Events.TransactionType INVALID = 0;
             public const Unity.Services.Analytics.Events.TransactionType PURCHASE = 2;
@@ -139,7 +215,7 @@ namespace Unity.Services.Analytics
             public const Unity.Services.Analytics.Events.TransactionType TRADE = 3;
             public int value__;
         }
-        public struct VirtualCurrency
+        [System.Obsolete(@"This struct has been moved outside the Events class, and it's parameters now conform to C# guidelines. Please use the standalone struct instead. This struct will be removed in an upcoming release.")] public struct VirtualCurrency
         {
             public long virtualCurrencyAmount;
             public string virtualCurrencyName;
@@ -147,76 +223,125 @@ namespace Unity.Services.Analytics
         }
     }
 
-    [System.Obsolete] public class NewPlayerHelper
+    public interface IAnalyticsService
     {
-        [System.Obsolete] public NewPlayerHelper(Unity.Services.Core.Device.Internal.IInstallationId installId) {}
-        [System.Obsolete] public bool IsNewPlayer();
+        public abstract string PrivacyUrl { get; }
+        public abstract void AcquisitionSource(Unity.Services.Analytics.AcquisitionSourceParameters acquisitionSourceParameters);
+        public abstract void AdImpression(Unity.Services.Analytics.AdImpressionParameters parameters);
+        public abstract System.Threading.Tasks.Task<System.Collections.Generic.List<string>> CheckForRequiredConsents();
+        public abstract long ConvertCurrencyToMinorUnits(string currencyCode, double value);
+        public abstract void CustomData(string eventName, System.Collections.Generic.IDictionary<string, object> eventParams);
+        public abstract void Flush();
+        public abstract void OptOut();
+        public abstract void ProvideOptInConsent(string identifier, bool consent);
+        public abstract void RecordInternalEvent(Unity.Services.Analytics.Internal.Event eventToRecord);
+        public abstract System.Threading.Tasks.Task SetAnalyticsEnabled(bool enabled);
+        public abstract void Transaction(Unity.Services.Analytics.TransactionParameters transactionParameters);
+        public abstract void TransactionFailed(Unity.Services.Analytics.TransactionFailedParameters parameters);
+    }
+
+    public struct Item
+    {
+        public long ItemAmount;
+        public string ItemName;
+        public string ItemType;
+    }
+
+    public struct Product
+    {
+        public System.Collections.Generic.List<Unity.Services.Analytics.Item> Items;
+        public System.Nullable<Unity.Services.Analytics.RealCurrency> RealCurrency;
+        public System.Collections.Generic.List<Unity.Services.Analytics.VirtualCurrency> VirtualCurrencies;
+    }
+
+    public struct RealCurrency
+    {
+        public long RealCurrencyAmount;
+        public string RealCurrencyType;
     }
 
     public static class SdkVersion
     {
         public static readonly string SDK_VERSION;
     }
+
+    public struct TransactionFailedParameters
+    {
+        public string AmazonUserID;
+        public string EngagementID;
+        public string FailureReason;
+        public string GameStoreID;
+        public System.Nullable<bool> IsInitiator;
+        public string PaymentCountry;
+        public string ProductID;
+        public Unity.Services.Analytics.Product ProductsReceived;
+        public Unity.Services.Analytics.Product ProductsSpent;
+        public System.Nullable<long> RevenueValidated;
+        public string StoreID;
+        public string StoreItemID;
+        public string StoreItemSkuID;
+        public string StoreSourceID;
+        public string TransactionID;
+        public string TransactionName;
+        public System.Nullable<Unity.Services.Analytics.TransactionServer> TransactionServer;
+        public Unity.Services.Analytics.TransactionType TransactionType;
+    }
+
+    public struct TransactionParameters
+    {
+        public string PaymentCountry;
+        public string ProductID;
+        public Unity.Services.Analytics.Product ProductsReceived;
+        public Unity.Services.Analytics.Product ProductsSpent;
+        public System.Nullable<long> RevenueValidated;
+        public string StoreID;
+        public string StoreItemID;
+        public string StoreItemSkuID;
+        public string StoreSourceID;
+        public string TransactionID;
+        public string TransactionName;
+        public string TransactionReceipt;
+        public string TransactionReceiptSignature;
+        public System.Nullable<Unity.Services.Analytics.TransactionServer> TransactionServer;
+        public Unity.Services.Analytics.TransactionType TransactionType;
+        public string TransactorID;
+    }
+
+    public enum TransactionServer
+    {
+        public const Unity.Services.Analytics.TransactionServer AMAZON = 1;
+        public const Unity.Services.Analytics.TransactionServer APPLE = 0;
+        public const Unity.Services.Analytics.TransactionServer GOOGLE = 2;
+        public int value__;
+    }
+
+    public enum TransactionType
+    {
+        public const Unity.Services.Analytics.TransactionType INVALID = 0;
+        public const Unity.Services.Analytics.TransactionType PURCHASE = 2;
+        public const Unity.Services.Analytics.TransactionType SALE = 1;
+        public const Unity.Services.Analytics.TransactionType TRADE = 3;
+        public int value__;
+    }
+
+    public struct VirtualCurrency
+    {
+        public long VirtualCurrencyAmount;
+        public string VirtualCurrencyName;
+        public Unity.Services.Analytics.VirtualCurrencyType VirtualCurrencyType;
+    }
+
+    public enum VirtualCurrencyType
+    {
+        public const Unity.Services.Analytics.VirtualCurrencyType GRIND = 0;
+        public const Unity.Services.Analytics.VirtualCurrencyType PREMIUM = 1;
+        public const Unity.Services.Analytics.VirtualCurrencyType PREMIUM_GRIND = 2;
+        public int value__;
+    }
 }
 
 namespace Unity.Services.Analytics.Internal
 {
-    [System.Obsolete(@"Don't interact with the buffer directly - use the methods on the Events class to send events instead. This will be removed in a future release")] public class Buffer : Unity.Services.Analytics.Internal.IBuffer
-    {
-        public virtual string InstallID { get; set; }
-        public virtual string PlayerID { get; set; }
-        public virtual string SessionID { get; set; }
-        public virtual string UserID { get; set; }
-        public Buffer() {}
-        public virtual void ClearBuffer();
-        public virtual void ClearDiskCache();
-        public virtual System.Collections.Generic.List<Unity.Services.Analytics.Internal.Buffer.Token> CloneTokens();
-        public virtual void FlushToDisk();
-        public virtual void InsertTokens(System.Collections.Generic.List<Unity.Services.Analytics.Internal.Buffer.Token> tokens);
-        public virtual void LoadFromDisk();
-        public virtual void PushArrayEnd();
-        public virtual void PushArrayStart(string name = default(string));
-        public virtual void PushBool(bool val, string name = default(string));
-        public virtual void PushDouble(double val, string name = default(string));
-        public virtual void PushEndEvent();
-        public virtual void PushEvent(Unity.Services.Analytics.Internal.Event evt);
-        public virtual void PushFloat(float val, string name = default(string));
-        public virtual void PushInt(int val, string name = default(string));
-        public virtual void PushInt64(long val, string name = default(string));
-        public virtual void PushObjectEnd();
-        public virtual void PushObjectStart(string name = default(string));
-        public virtual void PushStartEvent(string name, System.DateTime datetime, System.Nullable<long> eventVersion, bool addPlayerIdsToEventBody = False);
-        public virtual void PushString(string val, string name = default(string));
-        public virtual void PushTimestamp(System.DateTime val, string name);
-        public static string SaveDateTime(System.DateTime dateTime);
-        public virtual string Serialize(System.Collections.Generic.List<Unity.Services.Analytics.Internal.Buffer.Token> tokens);
-        [System.Obsolete(@"Don't interact with the buffer tokens directly - use the methods on the Events class to send events instead. This will be removed in a future release")] public struct Token
-        {
-            public object Data;
-            public string Name;
-            public Unity.Services.Analytics.Internal.Buffer.TokenType Type;
-        }
-        [System.Obsolete(@"Don't interact with the buffer tokens directly - use the methods on the Events class to send events instead. This will be removed in a future release")] public enum TokenType
-        {
-            public const Unity.Services.Analytics.Internal.Buffer.TokenType Boolean = 8;
-            public const Unity.Services.Analytics.Internal.Buffer.TokenType EventArrayEnd = 7;
-            public const Unity.Services.Analytics.Internal.Buffer.TokenType EventArrayStart = 6;
-            public const Unity.Services.Analytics.Internal.Buffer.TokenType EventEnd = 1;
-            public const Unity.Services.Analytics.Internal.Buffer.TokenType EventObjectEnd = 5;
-            public const Unity.Services.Analytics.Internal.Buffer.TokenType EventObjectStart = 4;
-            public const Unity.Services.Analytics.Internal.Buffer.TokenType EventParamsEnd = 3;
-            public const Unity.Services.Analytics.Internal.Buffer.TokenType EventParamsStart = 2;
-            public const Unity.Services.Analytics.Internal.Buffer.TokenType EventStart = 0;
-            public const Unity.Services.Analytics.Internal.Buffer.TokenType EventTimestamp = 13;
-            public const Unity.Services.Analytics.Internal.Buffer.TokenType Float64 = 9;
-            public const Unity.Services.Analytics.Internal.Buffer.TokenType Int64 = 11;
-            public const Unity.Services.Analytics.Internal.Buffer.TokenType StandardEventIds = 14;
-            public const Unity.Services.Analytics.Internal.Buffer.TokenType String = 10;
-            public const Unity.Services.Analytics.Internal.Buffer.TokenType Timestamp = 12;
-            public int value__;
-        }
-    }
-
     public class Event
     {
         public string Name { get; }
@@ -244,35 +369,6 @@ namespace Unity.Services.Analytics.Internal
         public void Set(string key, float value);
         public void Set(string key, string value);
     }
-
-    [System.Obsolete(@"Don't interact with the buffer directly - use the methods on the Events class to send events instead. This will be removed in a future release")] public interface IBuffer
-    {
-        public abstract string InstallID { get; set; }
-        public abstract string PlayerID { get; set; }
-        public abstract string SessionID { get; set; }
-        public abstract string UserID { get; set; }
-        public abstract void ClearBuffer();
-        public abstract void ClearDiskCache();
-        public abstract System.Collections.Generic.List<Unity.Services.Analytics.Internal.Buffer.Token> CloneTokens();
-        public abstract void FlushToDisk();
-        public abstract void InsertTokens(System.Collections.Generic.List<Unity.Services.Analytics.Internal.Buffer.Token> tokens);
-        public abstract void LoadFromDisk();
-        public abstract void PushArrayEnd();
-        public abstract void PushArrayStart(string name = default(string));
-        public abstract void PushBool(bool val, string name = default(string));
-        public abstract void PushDouble(double val, string name = default(string));
-        public abstract void PushEndEvent();
-        public abstract void PushEvent(Unity.Services.Analytics.Internal.Event evt);
-        public abstract void PushFloat(float val, string name = default(string));
-        public abstract void PushInt(int val, string name = default(string));
-        public abstract void PushInt64(long val, string name = default(string));
-        public abstract void PushObjectEnd();
-        public abstract void PushObjectStart(string name = default(string));
-        public abstract void PushStartEvent(string name, System.DateTime datetime, System.Nullable<long> eventVersion, bool addPlayerIdsToEventBody = False);
-        public abstract void PushString(string val, string name = default(string));
-        public abstract void PushTimestamp(System.DateTime val, string name = default(string));
-        public abstract string Serialize(System.Collections.Generic.List<Unity.Services.Analytics.Internal.Buffer.Token> tokens);
-    }
 }
 
 namespace Unity.Services.Analytics.Internal.Platform
@@ -285,14 +381,6 @@ namespace Unity.Services.Analytics.Internal.Platform
 
 namespace Unity.Services.Analytics.Platform
 {
-    [System.Obsolete] public class DeviceIdentifiers
-    {
-        [System.Obsolete] public static string Idfa { get; }
-        [System.Obsolete] public static string Idfv { get; }
-        public DeviceIdentifiers() {}
-        [System.Obsolete] public static void SetupIdentifiers();
-    }
-
     public static class Runtime
     {
         public static string Name();

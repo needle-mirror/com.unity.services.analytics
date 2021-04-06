@@ -4,12 +4,12 @@ using UnityEditor;
 
 namespace Unity.Services.Analytics.Editor.Settings
 {
-    public struct AnalyticsIdentifier : IEditorGameServiceIdentifier
+    struct AnalyticsIdentifier : IEditorGameServiceIdentifier
     {
         public string GetKey() => "Analytics - Gaming Services";
     }
 
-    public class AnalyticsEditorGameService : IEditorGameService
+    class AnalyticsEditorGameService : IEditorGameService
     {
         public string Name => "Analytics - Gaming Services";
         public IEditorGameServiceIdentifier Identifier => k_Identifier;

@@ -1,4 +1,4 @@
-
+using Unity.Services.Analytics.Internal;
 using UnityEngine;
 
 namespace Unity.Services.Analytics.Data
@@ -17,7 +17,6 @@ namespace Unity.Services.Analytics.Data
         internal string GameBundleID { get; set; }
         internal string Platform { get; set; }
         internal string UasUserID { get; set; }
-        internal string Idfa { get; set; }
         internal string Idfv { get; set; }
         internal double? DeviceVolume { get; set; }
         internal double? BatteryLoad { get; set; }
@@ -26,7 +25,7 @@ namespace Unity.Services.Analytics.Data
         internal string UserCountry { get; set; }
         internal string ProjectID { get; set; }
 
-        internal void SerializeCommonEventParams(ref Internal.IBuffer buf, string callingMethodIdentifier)
+        internal void SerializeCommonEventParams(ref IBuffer buf, string callingMethodIdentifier)
         {
             if (!string.IsNullOrEmpty(GameStoreID))
             {
@@ -44,12 +43,6 @@ namespace Unity.Services.Analytics.Data
             {
                 // Schema: Optional, IsEnum
                 buf.PushString(Platform, "platform");
-            }
-
-            if (!string.IsNullOrEmpty(Idfa))
-            {
-                // Schema: Optional
-                buf.PushString(Idfa, "idfa");
             }
 
             if (!string.IsNullOrEmpty(Idfv))

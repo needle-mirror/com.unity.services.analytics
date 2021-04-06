@@ -7,12 +7,12 @@ namespace Unity.Services.Analytics
     {
         public static void RecordCustomEventWithNoParameters()
         {
-            Events.CustomData("myEvent", new Dictionary<string, object>());
+            AnalyticsService.Instance.CustomData("myEvent", new Dictionary<string, object>());
         }
 
         public static void RecordCustomEventWithParameters()
         {
-            var parameters = new Dictionary<string, object>()
+            var parameters = new Dictionary<string, object>
             {
                 { "fabulousString", "hello there" },
                 { "sparklingInt", 1337 },
@@ -23,7 +23,7 @@ namespace Unity.Services.Analytics
                 { "ultimateTimestamp", DateTime.UtcNow }
             };
 
-            Events.CustomData("myEvent", parameters);
+            AnalyticsService.Instance.CustomData("myEvent", parameters);
         }
     }
 }

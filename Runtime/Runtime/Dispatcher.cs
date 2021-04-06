@@ -1,5 +1,7 @@
+using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Networking;
 
@@ -8,29 +10,32 @@ namespace Unity.Services.Analytics.Internal
     interface IDispatcher
     {
         string CollectUrl { get; set; }
-        void Flush();
+        Task Flush();
     }
 
     class Dispatcher : IDispatcher
     {
         readonly IBuffer m_DataBuffer;
-        readonly Dictionary<UnityWebRequestAsyncOperation, List<Buffer.Token>> m_Requests = new Dictionary<UnityWebRequestAsyncOperation, List<Buffer.Token>>();
+        readonly IWebRequestHelper m_WebRequestHelper;
+
+        internal readonly Dictionary<Guid, List<Buffer.Token>> Requests = new Dictionary<Guid, List<Buffer.Token>>();
 
         public string CollectUrl { get; set; }
 
         IConsentTracker ConsentTracker { get; }
 
-        public Dispatcher(IBuffer buffer, IConsentTracker consentTracker = null)
+        public Dispatcher(IBuffer buffer, IWebRequestHelper webRequestHelper, IConsentTracker consentTracker = null)
         {
             m_DataBuffer = buffer;
+            m_WebRequestHelper = webRequestHelper;
             ConsentTracker = consentTracker;
         }
 
-        public void Flush()
+        public async Task Flush()
         {
             // Some sanity check that we aren't spinning out of control.
             // This should be very unlikely.
-            if (m_Requests.Count > 128)
+            if (Requests.Count > 128)
             {
                 Debug.LogWarning("Analytics Dispatcher has reached limit of pending requests.");
                 return;
@@ -43,31 +48,35 @@ namespace Unity.Services.Analytics.Internal
                 return;
             }
 
-            FlushBufferToService();
+            await FlushBufferToService();
         }
 
-        void FlushBufferToService()
+        byte[] SerializeBuffer(List<Buffer.Token> tokens)
+        {
+            var collectData = m_DataBuffer.Serialize(tokens);
+            if (string.IsNullOrEmpty(collectData))
+            {
+                return null;
+            }
+
+            return Encoding.UTF8.GetBytes(collectData);
+        }
+
+        async Task FlushBufferToService()
         {
             // Serialize it into a JSON Blob, then POST it to the Collect bulk URL.
             // 'Bulk Events' -> https://docs.deltadna.com/advanced-integration/rest-api/
 
             var tokens = m_DataBuffer.CloneTokens();
+            var task = Task.Factory.StartNew(() => SerializeBuffer(tokens));
+            var postBytes = await task;
 
-            var collectData = m_DataBuffer.Serialize(tokens);
-
-            if (string.IsNullOrEmpty(collectData))
+            if (postBytes == null || postBytes.Length == 0)
             {
                 return;
             }
 
-            var postBytes = Encoding.UTF8.GetBytes(collectData);
-
-            var request = new UnityWebRequest(CollectUrl, UnityWebRequest.kHttpVerbPOST);
-            var upload = new UploadHandlerRaw(postBytes)
-            {
-                contentType = "application/json"
-            };
-            request.uploadHandler = upload;
+            var request = m_WebRequestHelper.CreateWebRequest(CollectUrl, UnityWebRequest.kHttpVerbPOST, postBytes);
 
             if (ConsentTracker.IsGeoIpChecked() && ConsentTracker.IsConsentGiven())
             {
@@ -77,31 +86,24 @@ namespace Unity.Services.Analytics.Internal
                 }
             }
 
-            var requestOp = request.SendWebRequest();
-
-#if UNITY_ANALYTICS_DEVELOPMENT
-            Debug.Log("AnalyticsRuntime: Flush");
-#endif
-
+            var requestId = Guid.NewGuid();
             // Callback
             // If the result is successful we will remove the request.
             // else if there was a failure, we insert the tokens back into the buffer.
-            requestOp.completed += _ =>
+            m_WebRequestHelper.SendWebRequest(request, delegate (long responseCode)
             {
 #if UNITY_ANALYTICS_DEVELOPMENT
-                Debug.LogFormat("AnalyticsRuntime: Web Callback - Request.Count = {0}", m_Requests.Count);
+                Debug.LogFormat("AnalyticsRuntime: Web Callback - Request.Count = {0}", Requests.Count);
 #endif
 
-                var code = requestOp.webRequest.responseCode;
-
-                if (!request.isNetworkError && code == 204)
+                if (!request.isNetworkError && responseCode == 204)
                 {
 #if UNITY_ANALYTICS_DEVELOPMENT
-                    Debug.Assert(code == 204, "AnalyticsRuntime: Incorrect response, check your JSON for errors.");
+                    Debug.Assert(responseCode == 204, "AnalyticsRuntime: Incorrect response, check your JSON for errors.");
 #endif
 
 #if UNITY_ANALYTICS_EVENT_LOGS
-                    Debug.LogFormat("Events uploaded successfully!", code);
+                    Debug.LogFormat("Events uploaded successfully!");
 #endif
 
                     m_DataBuffer.ClearDiskCache();
@@ -109,7 +111,7 @@ namespace Unity.Services.Analytics.Internal
                 else
                 {
                     // Reinsert the tokens back into the buffer.
-                    m_DataBuffer.InsertTokens(m_Requests[requestOp]);
+                    m_DataBuffer.InsertTokens(Requests[requestId]);
 
 #if UNITY_ANALYTICS_EVENT_LOGS
                     if (request.isNetworkError)
@@ -118,7 +120,7 @@ namespace Unity.Services.Analytics.Internal
                     }
                     else
                     {
-                        Debug.LogFormat("Events failed to upload (code {0}) -- will retry at next heartbeat.", code);
+                        Debug.LogFormat("Events failed to upload (code {0}) -- will retry at next heartbeat.", responseCode);
                     }
 #endif
 
@@ -126,14 +128,18 @@ namespace Unity.Services.Analytics.Internal
                 }
 
                 // Clear the request now that we are done.
-                m_Requests.Remove(requestOp);
+                Requests.Remove(requestId);
                 request.Dispose();
-            };
-
-            m_Requests.Add(requestOp, tokens);
+            });
 
 #if UNITY_ANALYTICS_DEVELOPMENT
-            Debug.LogFormat("AnalyticsRuntime: Request In Queue - Request.Count = {0}", m_Requests.Count);
+            Debug.Log("AnalyticsRuntime: Flush");
+#endif
+
+            Requests.Add(requestId, tokens);
+
+#if UNITY_ANALYTICS_DEVELOPMENT
+            Debug.LogFormat("AnalyticsRuntime: Request In Queue - Request.Count = {0}", Requests.Count);
 #endif
 
 #if UNITY_ANALYTICS_EVENT_LOGS

@@ -27,7 +27,7 @@ namespace Unity.Services.Analytics
                 }
             }
 
-            Events.Startup();
+            AnalyticsService.internalInstance.Startup();
         }
 
         void Update()
@@ -41,15 +41,14 @@ namespace Unity.Services.Analytics
 
             if (m_Time >= 60.0F)
             {
-                Events.InternalTick();
+                AnalyticsService.internalInstance.InternalTick();
                 m_Time = 0.0F;
             }
-
         }
 
         void OnDestroy()
         {
-            Events.Shutdown();
+            AnalyticsService.internalInstance.GameEnded();
         }
     }
 

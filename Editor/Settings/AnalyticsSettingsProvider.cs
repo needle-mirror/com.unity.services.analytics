@@ -5,7 +5,7 @@ using UnityEngine.UIElements;
 
 namespace Unity.Services.Analytics.Editor.Settings
 {
-    public class AnalyticsSettingsProvider : EditorGameServiceSettingsProvider
+    class AnalyticsSettingsProvider : EditorGameServiceSettingsProvider
     {
         const string k_Title = "Analytics - Gaming Services";
         const string k_GoToDashboardContainer = "dashboard-button-container";

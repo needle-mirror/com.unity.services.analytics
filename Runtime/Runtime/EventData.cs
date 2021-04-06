@@ -3,8 +3,6 @@ using System.Runtime.CompilerServices;
 using Unity.Services.Analytics.Platform;
 using UnityEngine;
 
-[assembly: InternalsVisibleTo("Unity.Services.AnalyticsRuntime.Tests")]
-
 namespace Unity.Services.Analytics.Internal
 {
     public class EventData

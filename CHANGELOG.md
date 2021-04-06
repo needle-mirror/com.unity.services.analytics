@@ -4,6 +4,40 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [4.0.0-pre.2] - 2021-04-06
+
+### New
+
+* Added a new event (`transactionFailed`) for recording failed transactions
+
+### Changed
+
+* IDFA usage has also been removed from the SDK - this identifier will no longer be added to events automatically when available.
+* This release restores the previous `Events` API for backwards compatability with `3.0.0` versions of the SDK. This API will be removed in a future release.
+
+## [4.0.0-pre.1] - 2021-03-14
+
+### Breaking Changes
+
+* The API of the Analytics package has been updated to match the other UGS packages. This means that APIs for recording events that were previously available on the `Events` static class are now available via `AnalyticsService.Instance` instead. 
+In addition, some classes that were previously nested in other types have been moved to standalone classes.
+  * The `Events` static class has changed to `AnalyticsService.Instance` - the same event recording methods are found on this new instance
+  * The `Transaction` method now uses standalone classes for `Product`, `TransactionType`, etc.
+  * The `AdImpressionArgs` object has been changed to an `AdImpressionParameters` struct
+  * Some parameter objects have been changed from lowercase fields to uppercase to match C# guidelines
+* Code in the `Unity.Services.Analytics.Editor.Settings` namespace has been made internal as it was never meant to be public.
+
+### New Features
+
+* Added support for sending a new event: acquisitionSource.
+* Added a method to convert currency to units suitable for the Transaction event
+* Added new Sample Scene
+* Added abilitiy to disable and re-enable the Analytics SDK
+
+### Bug Fixes
+
+* Fixed a bug that would block the main thread when trying to send large amounts of events
+
 ## [3.0.0-pre.4] - 2021-02-15
 
 * Fixed a bug where event data was not cached locally when the game closes

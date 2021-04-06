@@ -3,39 +3,13 @@ using UnityEngine;
 
 namespace Unity.Services.Analytics.Platform
 {
-    [Obsolete]
-    public class DeviceIdentifiers
+    interface IIDeviceIdentifiersInternal
     {
-        [Obsolete]
-        public static string Idfv { get; private set; }
-
-        [Obsolete]
-        public static string Idfa { get; private set; }
-
-        [Obsolete]
-        public static void SetupIdentifiers()
-        {
-            Idfv = SystemInfo.deviceUniqueIdentifier;
-            Application.RequestAdvertisingIdentifierAsync((id, enabled, error) =>
-            {
-                Idfa = id;
-            });
-        }
+        string Idfv { get; }
     }
 
-    class DeviceIdentifiersInternal
+    class DeviceIdentifiersInternal : IIDeviceIdentifiersInternal
     {
-        internal static string Idfv { get; private set; }
-
-        internal static string Idfa { get; private set; }
-
-        internal static void SetupIdentifiers()
-        {
-            Idfv = SystemInfo.deviceUniqueIdentifier;
-            Application.RequestAdvertisingIdentifierAsync((id, enabled, error) =>
-            {
-                Idfa = id;
-            });
-        }
+        public string Idfv => SystemInfo.deviceUniqueIdentifier;
     }
 }

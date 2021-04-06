@@ -6,15 +6,25 @@ namespace Unity.Services.Analytics
     {
         public static void RecordMinimalAdImpressionEvent()
         {
-            var args = new Events.AdImpressionArgs(Events.AdCompletionStatus.Completed, Events.AdProvider.UnityAds, "PLACEMENTID", "PLACEMENTNAME");
-            Events.AdImpression(args);
+            var args = new AdImpressionParameters
+            {
+                AdCompletionStatus = AdCompletionStatus.Completed,
+                AdProvider = AdProvider.UnityAds,
+                PlacementName = "PLACEMENTNAME",
+                PlacementID = "PLACEMENTID"
+            };
+            AnalyticsService.Instance.AdImpression(args);
         }
 
         public static void RecordCompleteAdImpressionEvent()
         {
-            var args = new Events.AdImpressionArgs(Events.AdCompletionStatus.Completed, Events.AdProvider.UnityAds, "PLACEMENTID", "PLACEMENTNAME")
+            var args = new AdImpressionParameters
             {
-                PlacementType = "PLACEMENTTYPE",
+                AdCompletionStatus = AdCompletionStatus.Completed,
+                AdProvider = AdProvider.UnityAds,
+                PlacementName = "PLACEMENTNAME",
+                PlacementID = "PLACEMENTID",
+                PlacementType = AdPlacementType.BANNER,
                 AdEcpmUsd = 123.4,
                 SdkVersion = "123.4",
                 AdImpressionID = "IMPRESSIVE",
@@ -28,161 +38,378 @@ namespace Unity.Services.Analytics
                 AdStatusCallback = "STATCALL"
             };
 
-            Events.AdImpression(args);
+            AnalyticsService.Instance.AdImpression(args);
         }
 
         public static void RecordSaleTransactionWithOnlyRequiredValues()
         {
-            Events.Transaction(new Events.TransactionParameters
+            AnalyticsService.Instance.Transaction(new TransactionParameters
             {
-                productsReceived = new Events.Product(),
-                productsSpent = new Events.Product(),
-                transactionName = "transactionName",
-                transactionType = Events.TransactionType.SALE
+                ProductsReceived = new Product(),
+                ProductsSpent = new Product(),
+                TransactionName = "emptySale",
+                TransactionType = TransactionType.SALE
             });
         }
 
         public static void RecordSaleTransactionWithRealCurrency()
         {
-            Events.Transaction(new Events.TransactionParameters
+            AnalyticsService.Instance.Transaction(new TransactionParameters
             {
-                productsReceived = new Events.Product
+                ProductsReceived = new Product
                 {
-                    realCurrency = new Events.RealCurrency() { realCurrencyType = "currencyType", realCurrencyAmount = 1337 }
+                    RealCurrency = new RealCurrency
+                    {
+                        RealCurrencyType = "EUR",
+                        RealCurrencyAmount = AnalyticsService.Instance.ConvertCurrencyToMinorUnits("EUR", 3.99)
+                    }
                 },
-                productsSpent = new Events.Product()
+                ProductsSpent = new Product
                 {
-                    realCurrency = new Events.RealCurrency() { realCurrencyType = "currencyType", realCurrencyAmount = 1338 }
+                    Items = new List<Item>
+                    {
+                        new Item
+                        {
+                            ItemName = "thePickOfDestiny",
+                            ItemAmount = 1,
+                            ItemType = "collectable"
+                        }
+                    }
                 },
-                transactionName = "transactionName",
-                transactionType = Events.TransactionType.SALE
+                TransactionName = "sellItem",
+                TransactionType = TransactionType.SALE
             });
         }
 
         public static void RecordSaleTransactionWithVirtualCurrency()
         {
-            Events.Transaction(new Events.TransactionParameters
+            AnalyticsService.Instance.Transaction(new TransactionParameters
             {
-                productsReceived = new Events.Product
+                ProductsReceived = new Product
                 {
-                    virtualCurrencies = new List<Events.VirtualCurrency>() {
-                        new Events.VirtualCurrency() {
-                            virtualCurrencyType = "PRcurrencyType", virtualCurrencyAmount = 1337, virtualCurrencyName = "PRcurrencyName" }
+                    VirtualCurrencies = new List<VirtualCurrency>
+                    {
+                        new VirtualCurrency
+                        {
+                            VirtualCurrencyType = VirtualCurrencyType.GRIND,
+                            VirtualCurrencyAmount = 125000,
+                            VirtualCurrencyName = "Cor"
+                        }
                     }
                 },
-                productsSpent = new Events.Product()
+                ProductsSpent = new Product
                 {
-                    virtualCurrencies = new List<Events.VirtualCurrency>() {
-                        new Events.VirtualCurrency() {
-                            virtualCurrencyType = "PScurrencyType", virtualCurrencyAmount = 1338, virtualCurrencyName = "PScurrencyName" }
+                    Items = new List<Item>
+                    {
+                        new Item
+                        {
+                            ItemName = "elucidator",
+                            ItemAmount = 1,
+                            ItemType = "sword"
+                        }
                     }
                 },
-                transactionName = "transactionName",
-                transactionType = Events.TransactionType.SALE
+                TransactionName = "sellItem",
+                TransactionType = TransactionType.SALE
             });
         }
 
         public static void RecordSaleTransactionWithMultipleVirtualCurrencies()
         {
-            Events.Transaction(new Events.TransactionParameters
+            AnalyticsService.Instance.Transaction(new TransactionParameters
             {
-                productsReceived = new Events.Product
+                ProductsReceived = new Product
                 {
-                    virtualCurrencies = new List<Events.VirtualCurrency>() {
-                    new Events.VirtualCurrency() {
-                        virtualCurrencyType = "PRcurrencyType1", virtualCurrencyAmount = 1337, virtualCurrencyName = "PRcurrencyName1" },
-                    new Events.VirtualCurrency() {
-                        virtualCurrencyType = "PRcurrencyType2", virtualCurrencyAmount = 1338, virtualCurrencyName = "PRcurrencyName2" },
-                }
+                    VirtualCurrencies = new List<VirtualCurrency>
+                    {
+                        new VirtualCurrency
+                        {
+                            VirtualCurrencyType = VirtualCurrencyType.PREMIUM,
+                            VirtualCurrencyAmount = 100,
+                            VirtualCurrencyName = "Soul Points"
+                        },
+                        new VirtualCurrency
+                        {
+                            VirtualCurrencyType = VirtualCurrencyType.GRIND,
+                            VirtualCurrencyAmount = 50000,
+                            VirtualCurrencyName = "Gold Coins"
+                        },
+                    }
                 },
-                productsSpent = new Events.Product()
+                ProductsSpent = new Product
                 {
-                    virtualCurrencies = new List<Events.VirtualCurrency>() {
-                    new Events.VirtualCurrency() {
-                        virtualCurrencyType = "PScurrencyType1", virtualCurrencyAmount = 1339, virtualCurrencyName = "PScurrencyName1" },
-                    new Events.VirtualCurrency() {
-                        virtualCurrencyType = "PScurrencyType2", virtualCurrencyAmount = 1340, virtualCurrencyName = "PScurrencyName2" },
-                }
+                    Items = new List<Item>
+                    {
+                        new Item
+                        {
+                            ItemName = "darkRepulser",
+                            ItemAmount = 1,
+                            ItemType = "weapon"
+                        }
+                    }
                 },
-                transactionName = "transactionName",
-                transactionType = Events.TransactionType.SALE
+                TransactionName = "sellItem",
+                TransactionType = TransactionType.SALE
             });
         }
 
         public static void RecordSaleEventWithOneItem()
         {
-            Events.Transaction(new Events.TransactionParameters
+            AnalyticsService.Instance.Transaction(new TransactionParameters
             {
-                productsReceived = new Events.Product
+                ProductsReceived = new Product
                 {
-                    items = new List<Events.Item>() {
-                    new Events.Item() {
-                        itemName = "PRname", itemType = "PRtype", itemAmount = 1
-                       } }
+                    Items = new List<Item>
+                    {
+                        new Item
+                        {
+                            ItemName = "cabbage",
+                            ItemAmount = 50,
+                            ItemType = "food"
+                        }
+                    }
                 },
-                productsSpent = new Events.Product
+                ProductsSpent = new Product
                 {
-                    items = new List<Events.Item>() {
-                    new Events.Item() {
-                        itemName = "PSname", itemType = "PStype", itemAmount = 3
-                       } }
+                    Items = new List<Item>
+                    {
+                        new Item
+                        {
+                            ItemName = "marketStall",
+                            ItemAmount = 1,
+                            ItemType = "special"
+                        }
+                    }
                 },
-                transactionName = "transactionName",
-                transactionType = Events.TransactionType.SALE
+                TransactionName = "tradeItems",
+                TransactionType = TransactionType.SALE
             });
         }
 
         public static void RecordSaleEventWithMultipleItems()
         {
-            Events.Transaction(new Events.TransactionParameters
+            AnalyticsService.Instance.Transaction(new TransactionParameters
             {
-                productsReceived = new Events.Product
+                ProductsReceived = new Product
                 {
-                    items = new List<Events.Item>() {
-                    new Events.Item() {
-                        itemName = "PRname1", itemType = "PRtype1", itemAmount = 4
-                       },
-                    new Events.Item() {
-                        itemName = "PRname2", itemType = "PRtype2", itemAmount = 8
-                       }
+                    Items = new List<Item>
+                    {
+                        new Item
+                        {
+                            ItemName = "pancake",
+                            ItemAmount = 2,
+                            ItemType = "food",
+                        },
+                        new Item
+                        {
+                            ItemName = "whippedCream",
+                            ItemAmount = 165,
+                            ItemType = "food",
+                        }
                     }
                 },
-                productsSpent = new Events.Product
+                ProductsSpent = new Product
                 {
-                    items = new List<Events.Item>() {
-                    new Events.Item() {
-                        itemName = "PSname1", itemType = "PStype1", itemAmount = 1
-                       },
-                    new Events.Item() {
-                        itemName = "PSname2", itemType = "PStype2", itemAmount = 2
-                       }
+                    Items = new List<Item>
+                    {
+                        new Item
+                        {
+                            ItemName = "flour",
+                            ItemAmount = 100,
+                            ItemType = "food",
+                        },
+                        new Item
+                        {
+                            ItemName = "egg",
+                            ItemAmount = 1,
+                            ItemType = "food",
+                        },
+                        new Item
+                        {
+                            ItemName = "milk",
+                            ItemAmount = 200,
+                            ItemType = "food",
+                        },
+                        new Item
+                        {
+                            ItemName = "salt",
+                            ItemAmount = 1,
+                            ItemType = "food",
+                        },
+                        new Item
+                        {
+                            ItemName = "heavyCream",
+                            ItemAmount = 150,
+                            ItemType = "food",
+                        },
+                        new Item
+                        {
+                            ItemName = "sugar",
+                            ItemAmount = 15,
+                            ItemType = "food",
+                        }
                     }
                 },
-                transactionName = "transactionName",
-                transactionType = Events.TransactionType.SALE
+                TransactionName = "tradeItems",
+                TransactionType = TransactionType.SALE
             });
         }
 
         public static void RecordSaleEventWithOptionalParameters()
         {
-            Events.Transaction(new Events.TransactionParameters
+            AnalyticsService.Instance.Transaction(new TransactionParameters
             {
-                paymentCountry = "PL",
-                productID = "productid987",
-                revenueValidated = 999,
-                transactionID = "123-456-789",
-                transactionReceipt = "transactionrecepit",
-                transactionReceiptSignature = "signature",
-                transactionServer = Events.TransactionServer.APPLE,
-                transactorID = "transactorid123-456",
-                storeItemSkuID = "storeitemskuid",
-                storeItemID = "storeitemid",
-                storeID = "storeid",
-                storeSourceID = "storesourceid",
-                productsReceived = new Events.Product(),
-                productsSpent = new Events.Product(),
-                transactionName = "transactionName",
-                transactionType = Events.TransactionType.SALE
+                PaymentCountry = "PL",
+                ProductID = "productid987",
+                RevenueValidated = 999,
+                TransactionID = "0118-999-881-999-119-725-3",
+                TransactionReceipt = "transactionrecepit",
+                TransactionReceiptSignature = "signature",
+                TransactionServer = TransactionServer.APPLE,
+                TransactorID = "transactorid-0118-999-881-999-119-725-3",
+                StoreItemSkuID = "storeitemskuid",
+                StoreItemID = "storeitemid",
+                StoreID = "storeid",
+                StoreSourceID = "storesourceid",
+                ProductsReceived = new Product(),
+                ProductsSpent = new Product(),
+                TransactionName = "transactionName",
+                TransactionType = TransactionType.SALE
+            });
+        }
+
+        public static void RecordAcquisitionSourceEventWithOnlyRequiredValues()
+        {
+            AnalyticsService.Instance.AcquisitionSource(new AcquisitionSourceParameters
+            {
+                Channel = "CHNL",
+                CampaignId = "123-456-efg",
+                CreativeId = "cre-ati-vei-d",
+                CampaignName = "Interstitial:Halloween21",
+                Provider = "AppsFlyer"
+            });
+        }
+
+        public static void RecordAcquisitionSourceEventWithOptionalParameters()
+        {
+            AnalyticsService.Instance.AcquisitionSource(new AcquisitionSourceParameters
+            {
+                Channel = "CHNL",
+                CampaignId = "123-456-efg",
+                CreativeId = "cre-ati-vei-d",
+                CampaignName = "Interstitial:Halloween21",
+                Provider = "AppsFlyer",
+                CampaignType = "CPI",
+                Cost = 123.4F,
+                CostCurrency = "BGN",
+                Network = "Ironsource",
+            });
+        }
+
+        public static void RecordPurchaseEventWithOneItem()
+        {
+            AnalyticsService.Instance.Transaction(new TransactionParameters
+            {
+                ProductsReceived = new Product
+                {
+                    Items = new List<Item>
+                    {
+                        new Item
+                        {
+                            ItemName = "nerveGear",
+                            ItemAmount = 1,
+                            ItemType = "electronics",
+                        }
+                    }
+                },
+                ProductsSpent = new Product
+                {
+                    RealCurrency = new RealCurrency
+                    {
+                        RealCurrencyAmount = AnalyticsService.Instance.ConvertCurrencyToMinorUnits("JPY", 39800),
+                        RealCurrencyType = "JPY"
+                    }
+                },
+                TransactionName = "itemPurchase",
+                TransactionType = TransactionType.PURCHASE
+            });
+        }
+
+        public static void RecordPurchaseEventWithMultipleItems()
+        {
+            AnalyticsService.Instance.Transaction(new TransactionParameters
+            {
+                ProductsReceived = new Product
+                {
+                    Items = new List<Item>
+                    {
+                        new Item
+                        {
+                            ItemName = "magicarp",
+                            ItemAmount = 1,
+                            ItemType = "pokemon",
+                        },
+                        new Item
+                        {
+                            ItemName = "rareCandy",
+                            ItemAmount = 20,
+                            ItemType = "item",
+                        }
+                    }
+                },
+                ProductsSpent = new Product
+                {
+                    VirtualCurrencies = new List<VirtualCurrency>
+                    {
+                        new VirtualCurrency
+                        {
+                            VirtualCurrencyType = VirtualCurrencyType.GRIND,
+                            VirtualCurrencyAmount = 200500,
+                            VirtualCurrencyName = "Pokemon Dollar"
+                        },
+                    }
+                },
+                TransactionName = "itemPurchase",
+                TransactionType = TransactionType.PURCHASE
+            });
+        }
+
+        public static void RecordPurchaseEventWithMultipleCurrencies()
+        {
+            AnalyticsService.Instance.Transaction(new TransactionParameters
+            {
+                ProductsReceived = new Product
+                {
+                    Items = new List<Item>
+                    {
+                        new Item
+                        {
+                            ItemName = "holySwordExcalibur",
+                            ItemAmount = 1,
+                            ItemType = "weapon"
+                        }
+                    }
+                },
+                ProductsSpent = new Product
+                {
+                    VirtualCurrencies = new List<VirtualCurrency>
+                    {
+                        new VirtualCurrency
+                        {
+                            VirtualCurrencyType = VirtualCurrencyType.GRIND,
+                            VirtualCurrencyAmount = 4000000,
+                            VirtualCurrencyName = "Cor"
+                        },
+                        new VirtualCurrency
+                        {
+                            VirtualCurrencyType = VirtualCurrencyType.PREMIUM,
+                            VirtualCurrencyAmount = 50000,
+                            VirtualCurrencyName = "Credit"
+                        }
+                    }
+                },
+                TransactionName = "itemPurchase",
+                TransactionType = TransactionType.PURCHASE
             });
         }
     }

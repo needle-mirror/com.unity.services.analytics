@@ -29,7 +29,7 @@ class Ua2CoreInitializeCallback : IInitializablePackage
 
         var analyticsUserId = projectConfiguration.GetString("com.unity.services.core.analytics-user-id");
 
-        await Events.Initialize(installationId, playerId, environments.Current, analyticsUserId);
+        await AnalyticsService.internalInstance.Initialize(installationId, playerId, environments.Current, analyticsUserId);
 
 #if UNITY_ANALYTICS_DEVELOPMENT
         Debug.LogFormat("Core Initialize Callback\nInstall ID: {0}\nPlayer ID: {1}\nCustom Analytics ID: {2}",
@@ -39,10 +39,10 @@ class Ua2CoreInitializeCallback : IInitializablePackage
         );
 #endif
 
-        Events.NewPlayerEvent();
-        if (Events.ConsentTracker.IsGeoIpChecked())
+        AnalyticsService.internalInstance.NewPlayerEvent();
+        if (AnalyticsService.internalInstance.ConsentTracker.IsGeoIpChecked())
         {
-            Events.Flush();
+            AnalyticsService.internalInstance.Flush();
         }
     }
 }

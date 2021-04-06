@@ -4,14 +4,12 @@ using System.Globalization;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text;
+using Newtonsoft.Json;
 using UnityEngine;
-
-[assembly: InternalsVisibleTo("Unity.Services.AnalyticsRuntime.Tests")]
 
 namespace Unity.Services.Analytics.Internal
 {
-    [Obsolete("Don't interact with the buffer directly - use the methods on the Events class to send events instead. This will be removed in a future release")]
-    public interface IBuffer
+    interface IBuffer
     {
         string UserID { get; set; }
         string InstallID { get; set; }
@@ -48,8 +46,7 @@ namespace Unity.Services.Analytics.Internal
     /// This is _NOT_ a thread safe buffer, its the job of the calling code to
     /// handle that.
     /// </summary>
-    [Obsolete("Don't interact with the buffer directly - use the methods on the Events class to send events instead. This will be removed in a future release")]
-    public class Buffer : IBuffer
+    class Buffer : IBuffer
     {
         public string UserID { get; set; }
         public string SessionID { get; set; }
@@ -59,8 +56,7 @@ namespace Unity.Services.Analytics.Internal
         // With the exception of EventStart, EventEnd, these tokens map to the
         // DDNA JSON Schema. The full schema at the time of writing is. OBJECT,
         // ARRAY, STRING, INTEGER, BOOLEAN, TIMESTAMP, EVENT_TIMESTAMP, FLOAT.
-        [Obsolete("Don't interact with the buffer tokens directly - use the methods on the Events class to send events instead. This will be removed in a future release")]
-        public enum TokenType
+        internal enum TokenType
         {
             EventStart,
             EventEnd,
@@ -82,8 +78,7 @@ namespace Unity.Services.Analytics.Internal
         // The event information is broken into name, type, and data. The name
         // usually ends up being the key in the JSON and the type and data are
         // for serialization.
-        [Obsolete("Don't interact with the buffer tokens directly - use the methods on the Events class to send events instead. This will be removed in a future release")]
-        public struct Token
+        internal struct Token
         {
             public string Name;
             public TokenType Type;
@@ -96,8 +91,10 @@ namespace Unity.Services.Analytics.Internal
         }
 
         readonly List<Token> m_Tokens = new List<Token>();
-        readonly string m_CacheFilePath = $"{Application.persistentDataPath}/eventcache";
+        readonly string m_CacheFilePath = CanUseDiskPersistence() ? $"{Application.persistentDataPath}/eventcache" : "";
         readonly long m_CacheFileMaximumSize = 1024 * 1024 * 5; // 5MB
+
+        const string k_NoBufferSupportMessage = "Unity Analytics cache is not supported on this platform, data will not be locally persisted.";
 
         int m_DiskCacheLastFlushedToken;
         long m_DiskCacheSize;
@@ -258,9 +255,8 @@ namespace Unity.Services.Analytics.Internal
                             data.Append(t.Name);
                             data.Append("\":");
                         }
-                        data.Append("\"");
-                        data.Append((string)t.Data);
-                        data.Append("\",");
+                        data.Append(JsonConvert.ToString((string)t.Data));
+                        data.Append(",");
                         break;
                     }
                     case TokenType.Timestamp:
@@ -521,6 +517,12 @@ namespace Unity.Services.Analytics.Internal
 
         public void FlushToDisk()
         {
+            if (!CanUseDiskPersistence())
+            {
+                Debug.Log(k_NoBufferSupportMessage);
+                return;
+            }
+
             if (m_DiskCacheSize > m_CacheFileMaximumSize)
             {
                 // Cache is full, do not keep spaffing into it.
@@ -547,6 +549,11 @@ namespace Unity.Services.Analytics.Internal
 
         public void ClearDiskCache()
         {
+            if (!CanUseDiskPersistence())
+            {
+                Debug.Log(k_NoBufferSupportMessage);
+                return;
+            }
             m_DiskCacheLastFlushedToken = 0;
             if (File.Exists(m_CacheFilePath))
             {
@@ -562,6 +569,12 @@ namespace Unity.Services.Analytics.Internal
 
         public void LoadFromDisk()
         {
+            if (!CanUseDiskPersistence())
+            {
+                Debug.Log(k_NoBufferSupportMessage);
+                return;
+            }
+
             m_Tokens.Clear();
             if (File.Exists(m_CacheFilePath))
             {
@@ -701,6 +714,19 @@ namespace Unity.Services.Analytics.Internal
             }
 
             PushEndEvent();
+        }
+
+        static bool CanUseDiskPersistence()
+        {
+            // Switch requires a specific setup to have write access to the disc so it won't be handled here.
+            return
+                Application.platform != RuntimePlatform.Switch &&
+#if !UNITY_2021_1_OR_NEWER
+                Application.platform != RuntimePlatform.XboxOne &&
+#endif
+                Application.platform != RuntimePlatform.GameCoreXboxOne &&
+                Application.platform != RuntimePlatform.GameCoreXboxSeries
+                && !string.IsNullOrEmpty(Application.persistentDataPath);
         }
     }
 

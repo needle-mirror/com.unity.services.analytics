@@ -5,6 +5,22 @@ using System.Runtime.CompilerServices;
 
 namespace Unity.Services.Analytics.Data
 {
+    interface IDataGenerator
+    {
+        void GameRunning(ref Internal.IBuffer buf, DateTime datetime, StdCommonParams commonParams, string callingMethodIdentifier);
+        void SdkStartup(ref Internal.IBuffer buf, DateTime datetime, StdCommonParams commonParams, string callingMethodIdentifier);
+        void NewPlayer(ref Internal.IBuffer buf, DateTime datetime, StdCommonParams commonParams, string callingMethodIdentifier, string deviceModel);
+        void GameStarted(ref Internal.IBuffer buf, DateTime datetime, StdCommonParams commonParams, string callingMethodIdentifier, string idLocalProject, string osVersion, bool isTiny, bool debugDevice, string userLocale);
+        void GameEnded(ref Internal.IBuffer buf, DateTime datetime, StdCommonParams commonParams, string callingMethodIdentifier, DataGenerator.SessionEndState quitState);
+        void AdImpression(ref Internal.IBuffer buf, DateTime datetime, StdCommonParams commonParams, string callingMethodIdentifier,
+            AdImpressionParameters adImpressionParameters);
+        void Transaction(ref Internal.IBuffer buf, DateTime datetime, StdCommonParams commonParams, string callingMethodIdentifier, TransactionParameters transactionParameters);
+        void TransactionFailed(ref Internal.IBuffer buf, DateTime datetime, StdCommonParams commonParams, string callingMethodIdentifier, TransactionFailedParameters transactionParameters);
+        void ClientDevice(ref Internal.IBuffer buf, DateTime datetime, StdCommonParams commonParams, string callingMethodIdentifier,
+            string cpuType, string gpuType, Int64 cpuCores, Int64 ramTotal, Int64 screenWidth, Int64 screenHeight, Int64 screenDPI);
+        void AcquisitionSource(ref Internal.IBuffer buf, DateTime datetime, StdCommonParams commonParams, string callingMethodIdentifier, AcquisitionSourceParameters acquisitionSourceParameters);
+    }
+
     /// <summary>
     /// DataGenerator is used to push event data into the internal buffer.
     /// The reason its split like this is so we can test the output from
@@ -12,12 +28,10 @@ namespace Unity.Services.Analytics.Data
     /// can be pretty confident we are always producing valid JSON for the
     /// backend.
     /// </summary>
-    static class Generator
+    class DataGenerator : IDataGenerator
     {
-        internal static void SdkStartup(ref Internal.IBuffer buf, DateTime datetime, StdCommonParams commonParams, string callingMethodIdentifier)
+        public void SdkStartup(ref Internal.IBuffer buf, DateTime datetime, StdCommonParams commonParams, string callingMethodIdentifier)
         {
-            // Schema: http://go/UA2_SDKStart_v1
-
             buf.PushStartEvent("sdkStart", datetime, 1, true);
             buf.PushString(SdkVersion.SDK_VERSION, "sdkVersion");
 
@@ -28,10 +42,8 @@ namespace Unity.Services.Analytics.Data
             buf.PushEndEvent();
         }
 
-        internal static void GameRunning(ref Internal.IBuffer buf, DateTime datetime, StdCommonParams commonParams, string callingMethodIdentifier)
+        public void GameRunning(ref Internal.IBuffer buf, DateTime datetime, StdCommonParams commonParams, string callingMethodIdentifier)
         {
-            // Schema: http://go/UA2_GameRunning_v1
-
             buf.PushStartEvent("gameRunning", datetime, 1, true);
 
             // Event Params
@@ -40,10 +52,8 @@ namespace Unity.Services.Analytics.Data
             buf.PushEndEvent();
         }
 
-        internal static void NewPlayer(ref Internal.IBuffer buf, DateTime datetime, StdCommonParams commonParams, string callingMethodIdentifier, string deviceModel)
+        public void NewPlayer(ref Internal.IBuffer buf, DateTime datetime, StdCommonParams commonParams, string callingMethodIdentifier, string deviceModel)
         {
-            // Schema: http://go/UA2_NewPlayer_v1
-
             buf.PushStartEvent("newPlayer", datetime, 1, true);
 
             // Event Params
@@ -55,16 +65,8 @@ namespace Unity.Services.Analytics.Data
             buf.PushEndEvent();
         }
 
-        internal static void GameStarted(
-            ref Internal.IBuffer buf,
-            DateTime datetime,
-            StdCommonParams commonParams,
-            string callingMethodIdentifier,
-            string idLocalProject,
-            string osVersion,
-            bool isTiny,
-            bool debugDevice,
-            string userLocale)
+        public void GameStarted(ref Internal.IBuffer buf, DateTime datetime, StdCommonParams commonParams,
+            string callingMethodIdentifier, string idLocalProject, string osVersion, bool isTiny, bool debugDevice, string userLocale)
         {
             buf.PushStartEvent("gameStarted", datetime, 1, true);
 
@@ -98,10 +100,8 @@ namespace Unity.Services.Analytics.Data
             QUIT,
         }
 
-        internal static void GameEnded(ref Internal.IBuffer buf, DateTime datetime, StdCommonParams commonParams, string callingMethodIdentifier, SessionEndState quitState)
+        public void GameEnded(ref Internal.IBuffer buf, DateTime datetime, StdCommonParams commonParams, string callingMethodIdentifier, SessionEndState quitState)
         {
-            // Schema: http://go/UA2_GameEnded_v1
-
             buf.PushStartEvent("gameEnded", datetime, 1, true);
 
             // Event Params
@@ -112,30 +112,8 @@ namespace Unity.Services.Analytics.Data
             buf.PushEndEvent();
         }
 
-        internal static void AdImpression(
-            ref Internal.IBuffer buf,
-            DateTime datetime,
-            StdCommonParams commonParams,
-            string callingMethodIdentifier,
-            string adCompletionStatus,
-            string adProvider,
-            string placementID,
-            string placementName,
-            string placementType,
-            double? adEcpmUsd,
-            string sdkVersion,
-            string adImpressionID,
-            string adStoreDestinationID,
-            string adMediaType,
-            Int64? adTimeWatchedMs,
-            Int64? adTimeCloseButtonShownMs,
-            Int64? adLengthMs,
-            bool? adHasClicked,
-            string adSource,
-            string adStatusCallback)
+        public void AdImpression(ref Internal.IBuffer buf, DateTime datetime, StdCommonParams commonParams, string callingMethodIdentifier, AdImpressionParameters adImpressionParameters)
         {
-            // Schema: http://go/UA2_AdImpression_v1
-
             buf.PushStartEvent("adImpression", datetime, 1, true);
 
             // Event Params
@@ -143,86 +121,116 @@ namespace Unity.Services.Analytics.Data
 
             // Schema: Required
 
-            buf.PushString(adCompletionStatus, "adCompletionStatus");
-            buf.PushString(adProvider, "adProvider");
-            buf.PushString(placementID, "placementId");
-            buf.PushString(placementName, "placementName");
+            buf.PushString(adImpressionParameters.AdCompletionStatus.ToString().ToUpperInvariant(), "adCompletionStatus");
+            buf.PushString(adImpressionParameters.AdProvider.ToString().ToUpperInvariant(), "adProvider");
+            buf.PushString(adImpressionParameters.PlacementID, "placementId");
+            buf.PushString(adImpressionParameters.PlacementName, "placementName");
 
             // Schema: Optional
 
-            if (adEcpmUsd is double adEcpmUsdValue)
+            if (adImpressionParameters.AdEcpmUsd is double adEcpmUsdValue)
             {
                 buf.PushDouble(adEcpmUsdValue, "adEcpmUsd");
             }
 
-            if (!string.IsNullOrEmpty(placementType))
+            if (adImpressionParameters.PlacementType != null)
             {
-                buf.PushString(placementType, "placementType");
+                buf.PushString(adImpressionParameters.PlacementType.ToString(), "placementType");
             }
 
-            if (!string.IsNullOrEmpty(sdkVersion))
+            if (!string.IsNullOrEmpty(adImpressionParameters.SdkVersion))
             {
-                buf.PushString(sdkVersion, "adSdkVersion");
+                buf.PushString(adImpressionParameters.SdkVersion, "adSdkVersion");
             }
 
-            if (!string.IsNullOrEmpty(adImpressionID))
+            if (!string.IsNullOrEmpty(adImpressionParameters.AdImpressionID))
             {
-                buf.PushString(adImpressionID, "adImpressionID");
+                buf.PushString(adImpressionParameters.AdImpressionID, "adImpressionID");
             }
 
-            if (!string.IsNullOrEmpty(adStoreDestinationID))
+            if (!string.IsNullOrEmpty(adImpressionParameters.AdStoreDstID))
             {
-                buf.PushString(adStoreDestinationID, "adStoreDestinationID");
+                buf.PushString(adImpressionParameters.AdStoreDstID, "adStoreDestinationID");
             }
 
-            if (!string.IsNullOrEmpty(adMediaType))
+            if (!string.IsNullOrEmpty(adImpressionParameters.AdMediaType))
             {
-                buf.PushString(adMediaType, "adMediaType");
+                buf.PushString(adImpressionParameters.AdMediaType, "adMediaType");
             }
 
-            if (adTimeWatchedMs is Int64 adTimeWatchedMsValue)
+            if (adImpressionParameters.AdTimeWatchedMs is Int64 adTimeWatchedMsValue)
             {
                 buf.PushInt64(adTimeWatchedMsValue, "adTimeWatchedMs");
             }
 
-            if (adTimeCloseButtonShownMs is Int64 adTimeCloseButtonShownMsValue)
+            if (adImpressionParameters.AdTimeCloseButtonShownMs is Int64 adTimeCloseButtonShownMsValue)
             {
                 buf.PushInt64(adTimeCloseButtonShownMsValue, "adTimeCloseButtonShownMs");
             }
 
-            if (adLengthMs is Int64 adLengthMsValue)
+            if (adImpressionParameters.AdLengthMs is Int64 adLengthMsValue)
             {
                 buf.PushInt64(adLengthMsValue, "adLengthMs");
             }
 
-            if (adHasClicked is bool adHasClickedValue)
+            if (adImpressionParameters.AdHasClicked is bool adHasClickedValue)
             {
                 buf.PushBool(adHasClickedValue, "adHasClicked");
             }
 
-            if (!string.IsNullOrEmpty(adSource))
+            if (!string.IsNullOrEmpty(adImpressionParameters.AdSource))
             {
-                buf.PushString(adSource, "adSource");
+                buf.PushString(adImpressionParameters.AdSource, "adSource");
             }
 
-            if (!string.IsNullOrEmpty(adStatusCallback))
+            if (!string.IsNullOrEmpty(adImpressionParameters.AdStatusCallback))
             {
-                buf.PushString(adStatusCallback, "adStatusCallback");
+                buf.PushString(adImpressionParameters.AdStatusCallback, "adStatusCallback");
             }
 
             buf.PushEndEvent();
         }
 
-        internal static void Transaction(
-            ref Internal.IBuffer buf,
-            DateTime datetime,
-            StdCommonParams commonParams,
-            string callingMethodIdentifier,
-            Events.TransactionParameters transactionParameters
-        )
+        public void AcquisitionSource(ref Internal.IBuffer buf, DateTime datetime, StdCommonParams commonParams, string callingMethodIdentifier, AcquisitionSourceParameters acquisitionSourceParameters)
         {
-            // Schema: http://go/UA2_Transaction_v1
+            buf.PushStartEvent("acquisitionSource", datetime, 1, true);
 
+            // Event Params
+            commonParams.SerializeCommonEventParams(ref buf, callingMethodIdentifier);
+
+            //other event parameters
+            // Required
+            buf.PushString(acquisitionSourceParameters.Channel, "acquisitionChannel");
+            buf.PushString(acquisitionSourceParameters.CampaignId, "acquisitionCampaignId");
+            buf.PushString(acquisitionSourceParameters.CreativeId, "acquisitionCreativeId");
+            buf.PushString(acquisitionSourceParameters.CampaignName, "acquisitionCampaignName");
+            buf.PushString(acquisitionSourceParameters.Provider, "acquisitionProvider");
+
+            if (!string.IsNullOrEmpty(acquisitionSourceParameters.CampaignType))
+            {
+                buf.PushString(acquisitionSourceParameters.CampaignType, "acquisitionCampaignType");
+            }
+
+            if (!string.IsNullOrEmpty(acquisitionSourceParameters.Network))
+            {
+                buf.PushString(acquisitionSourceParameters.Network, "acquisitionNetwork");
+            }
+
+            if (!string.IsNullOrEmpty(acquisitionSourceParameters.CostCurrency))
+            {
+                buf.PushString(acquisitionSourceParameters.CostCurrency, "acquisitionCostCurrency");
+            }
+
+            if (acquisitionSourceParameters.Cost is float cost)
+            {
+                buf.PushFloat(cost, "acquisitionCost");
+            }
+
+            buf.PushEndEvent();
+        }
+
+        public void Transaction(ref Internal.IBuffer buf, DateTime datetime, StdCommonParams commonParams, string callingMethodIdentifier, TransactionParameters transactionParameters)
+        {
             buf.PushStartEvent("transaction", datetime, 1, true);
             // Event Params
             commonParams.SerializeCommonEventParams(ref buf, callingMethodIdentifier);
@@ -232,87 +240,164 @@ namespace Unity.Services.Analytics.Data
                 buf.PushString(SdkVersion.SDK_VERSION, "sdkVersion");
             }
 
-            if (!string.IsNullOrEmpty(transactionParameters.paymentCountry))
+            if (!string.IsNullOrEmpty(transactionParameters.PaymentCountry))
             {
-                buf.PushString(transactionParameters.paymentCountry, "paymentCountry");
+                buf.PushString(transactionParameters.PaymentCountry, "paymentCountry");
             }
 
-            if (!string.IsNullOrEmpty(transactionParameters.productID))
+            if (!string.IsNullOrEmpty(transactionParameters.ProductID))
             {
-                buf.PushString(transactionParameters.productID, "productID");
+                buf.PushString(transactionParameters.ProductID, "productID");
             }
 
-            if (transactionParameters.revenueValidated.HasValue)
+            if (transactionParameters.RevenueValidated.HasValue)
             {
-                buf.PushInt64(transactionParameters.revenueValidated.Value, "revenueValidated");
+                buf.PushInt64(transactionParameters.RevenueValidated.Value, "revenueValidated");
             }
 
-            if (!string.IsNullOrEmpty(transactionParameters.transactionID))
+            if (!string.IsNullOrEmpty(transactionParameters.TransactionID))
             {
-                buf.PushString(transactionParameters.transactionID, "transactionID");
+                buf.PushString(transactionParameters.TransactionID, "transactionID");
             }
 
-            if (!string.IsNullOrEmpty(transactionParameters.transactionReceipt))
+            if (!string.IsNullOrEmpty(transactionParameters.TransactionReceipt))
             {
-                buf.PushString(transactionParameters.transactionReceipt, "transactionReceipt");
+                buf.PushString(transactionParameters.TransactionReceipt, "transactionReceipt");
             }
 
-            if (!string.IsNullOrEmpty(transactionParameters.transactionReceiptSignature))
+            if (!string.IsNullOrEmpty(transactionParameters.TransactionReceiptSignature))
             {
-                buf.PushString(transactionParameters.transactionReceiptSignature, "transactionReceiptSignature");
+                buf.PushString(transactionParameters.TransactionReceiptSignature, "transactionReceiptSignature");
             }
 
-            if (!string.IsNullOrEmpty(transactionParameters.transactionServer.ToString()))
+            if (!string.IsNullOrEmpty(transactionParameters.TransactionServer?.ToString()))
             {
-                buf.PushString(transactionParameters.transactionServer.ToString(), "transactionServer");
+                buf.PushString(transactionParameters.TransactionServer.ToString(), "transactionServer");
             }
 
-            if (!string.IsNullOrEmpty(transactionParameters.transactorID))
+            if (!string.IsNullOrEmpty(transactionParameters.TransactorID))
             {
-                buf.PushString(transactionParameters.transactorID, "transactorID");
+                buf.PushString(transactionParameters.TransactorID, "transactorID");
             }
 
-            if (!string.IsNullOrEmpty(transactionParameters.storeItemSkuID))
+            if (!string.IsNullOrEmpty(transactionParameters.StoreItemSkuID))
             {
-                buf.PushString(transactionParameters.storeItemSkuID, "storeItemSkuID");
+                buf.PushString(transactionParameters.StoreItemSkuID, "storeItemSkuID");
             }
 
-            if (!string.IsNullOrEmpty(transactionParameters.storeItemID))
+            if (!string.IsNullOrEmpty(transactionParameters.StoreItemID))
             {
-                buf.PushString(transactionParameters.storeItemID, "storeItemID");
+                buf.PushString(transactionParameters.StoreItemID, "storeItemID");
             }
 
-            if (!string.IsNullOrEmpty(transactionParameters.storeID))
+            if (!string.IsNullOrEmpty(transactionParameters.StoreID))
             {
-                buf.PushString(transactionParameters.storeID, "storeID");
+                buf.PushString(transactionParameters.StoreID, "storeID");
             }
 
-            if (!string.IsNullOrEmpty(transactionParameters.storeSourceID))
+            if (!string.IsNullOrEmpty(transactionParameters.StoreSourceID))
             {
-                buf.PushString(transactionParameters.storeSourceID, "storeSourceID");
+                buf.PushString(transactionParameters.StoreSourceID, "storeSourceID");
             }
 
             // Required
-            buf.PushString(transactionParameters.transactionName, "transactionName");
-            buf.PushString(transactionParameters.transactionType.ToString(), "transactionType");
-            SetProduct(ref buf, "productsReceived", transactionParameters.productsReceived);
-            SetProduct(ref buf, "productsSpent", transactionParameters.productsSpent);
+            buf.PushString(transactionParameters.TransactionName, "transactionName");
+            buf.PushString(transactionParameters.TransactionType.ToString(), "transactionType");
+            SetProduct(ref buf, "productsReceived", transactionParameters.ProductsReceived);
+            SetProduct(ref buf, "productsSpent", transactionParameters.ProductsSpent);
 
             buf.PushEndEvent();
         }
 
-        internal static void ClientDevice(
-            ref Internal.IBuffer buf,
-            DateTime datetime,
-            StdCommonParams commonParams,
-            string callingMethodIdentifier,
-            string cpuType,
-            string gpuType,
-            Int64 cpuCores,
-            Int64 ramTotal,
-            Int64 screenWidth,
-            Int64 screenHeight,
-            Int64 screenDPI)
+        public void TransactionFailed(ref Internal.IBuffer buf, DateTime datetime, StdCommonParams commonParams, string callingMethodIdentifier, TransactionFailedParameters parameters)
+        {
+            buf.PushStartEvent("transactionFailed", datetime, 1, true);
+            // Event Params
+            commonParams.SerializeCommonEventParams(ref buf, callingMethodIdentifier);
+
+            if (!string.IsNullOrEmpty(SdkVersion.SDK_VERSION))
+            {
+                buf.PushString(SdkVersion.SDK_VERSION, "sdkVersion");
+            }
+
+            if (!string.IsNullOrEmpty(parameters.PaymentCountry))
+            {
+                buf.PushString(parameters.PaymentCountry, "paymentCountry");
+            }
+
+            if (!string.IsNullOrEmpty(parameters.ProductID))
+            {
+                buf.PushString(parameters.ProductID, "productID");
+            }
+
+            if (parameters.RevenueValidated.HasValue)
+            {
+                buf.PushInt64(parameters.RevenueValidated.Value, "revenueValidated");
+            }
+
+            if (!string.IsNullOrEmpty(parameters.TransactionID))
+            {
+                buf.PushString(parameters.TransactionID, "transactionID");
+            }
+
+            if (!string.IsNullOrEmpty(parameters.TransactionServer?.ToString()))
+            {
+                buf.PushString(parameters.TransactionServer.ToString(), "transactionServer");
+            }
+
+            if (parameters.EngagementID != null)
+            {
+                buf.PushInt64((long)parameters.EngagementID, "engagementID");
+            }
+
+            if (!string.IsNullOrEmpty(parameters.GameStoreID))
+            {
+                buf.PushString(parameters.GameStoreID, "gameStoreID");
+            }
+
+            if (!string.IsNullOrEmpty(parameters.AmazonUserID))
+            {
+                buf.PushString(parameters.AmazonUserID, "amazonUserID");
+            }
+
+            if (parameters.IsInitiator != null)
+            {
+                buf.PushBool((bool)parameters.IsInitiator, "isInitiator");
+            }
+
+            if (!string.IsNullOrEmpty(parameters.StoreItemSkuID))
+            {
+                buf.PushString(parameters.StoreItemSkuID, "storeItemSkuID");
+            }
+
+            if (!string.IsNullOrEmpty(parameters.StoreItemID))
+            {
+                buf.PushString(parameters.StoreItemID, "storeItemID");
+            }
+
+            if (!string.IsNullOrEmpty(parameters.StoreID))
+            {
+                buf.PushString(parameters.StoreID, "storeID");
+            }
+
+            if (!string.IsNullOrEmpty(parameters.StoreSourceID))
+            {
+                buf.PushString(parameters.StoreSourceID, "storeSourceID");
+            }
+
+            // Required
+            buf.PushString(parameters.TransactionName, "transactionName");
+            buf.PushString(parameters.TransactionType.ToString(), "transactionType");
+            SetProduct(ref buf, "productsReceived", parameters.ProductsReceived);
+            SetProduct(ref buf, "productsSpent", parameters.ProductsSpent);
+
+            buf.PushString(parameters.FailureReason, "failureReason");
+
+            buf.PushEndEvent();
+        }
+
+        public void ClientDevice(ref Internal.IBuffer buf, DateTime datetime, StdCommonParams commonParams, string callingMethodIdentifier,
+            string cpuType, string gpuType, Int64 cpuCores, Int64 ramTotal, Int64 screenWidth, Int64 screenHeight, Int64 screenDPI)
         {
             buf.PushStartEvent("clientDevice", datetime, 1, true);
 
@@ -330,44 +415,44 @@ namespace Unity.Services.Analytics.Data
             buf.PushEndEvent();
         }
 
-        static void SetProduct(ref Internal.IBuffer buf, string productName, Events.Product product)
+        void SetProduct(ref Internal.IBuffer buf, string productName, Product product)
         {
             buf.PushObjectStart(productName);
 
-            if (product.realCurrency.HasValue)
+            if (product.RealCurrency.HasValue)
             {
                 buf.PushObjectStart("realCurrency");
-                buf.PushString(product.realCurrency.Value.realCurrencyType, "realCurrencyType");
-                buf.PushInt64(product.realCurrency.Value.realCurrencyAmount, "realCurrencyAmount");
+                buf.PushString(product.RealCurrency.Value.RealCurrencyType, "realCurrencyType");
+                buf.PushInt64(product.RealCurrency.Value.RealCurrencyAmount, "realCurrencyAmount");
                 buf.PushObjectEnd();
             }
 
-            if (product.virtualCurrencies != null && product.virtualCurrencies.Count != 0)
+            if (product.VirtualCurrencies != null && product.VirtualCurrencies.Count != 0)
             {
                 buf.PushArrayStart("virtualCurrencies");
-                foreach (var virtualCurrency in product.virtualCurrencies)
+                foreach (var virtualCurrency in product.VirtualCurrencies)
                 {
                     buf.PushObjectStart();
                     buf.PushObjectStart("virtualCurrency");
-                    buf.PushString(virtualCurrency.virtualCurrencyName, "virtualCurrencyName");
-                    buf.PushString(virtualCurrency.virtualCurrencyType, "virtualCurrencyType");
-                    buf.PushInt64(virtualCurrency.virtualCurrencyAmount, "virtualCurrencyAmount");
+                    buf.PushString(virtualCurrency.VirtualCurrencyName, "virtualCurrencyName");
+                    buf.PushString(virtualCurrency.VirtualCurrencyType.ToString(), "virtualCurrencyType");
+                    buf.PushInt64(virtualCurrency.VirtualCurrencyAmount, "virtualCurrencyAmount");
                     buf.PushObjectEnd();
                     buf.PushObjectEnd();
                 }
                 buf.PushArrayEnd();
             }
 
-            if (product.items != null && product.items.Count != 0)
+            if (product.Items != null && product.Items.Count != 0)
             {
                 buf.PushArrayStart("items");
-                foreach (var item in product.items)
+                foreach (var item in product.Items)
                 {
                     buf.PushObjectStart();
                     buf.PushObjectStart("item");
-                    buf.PushString(item.itemName, "itemName");
-                    buf.PushString(item.itemType, "itemType");
-                    buf.PushInt64(item.itemAmount, "itemAmount");
+                    buf.PushString(item.ItemName, "itemName");
+                    buf.PushString(item.ItemType, "itemType");
+                    buf.PushInt64(item.ItemAmount, "itemAmount");
                     buf.PushObjectEnd();
                     buf.PushObjectEnd();
                 }
