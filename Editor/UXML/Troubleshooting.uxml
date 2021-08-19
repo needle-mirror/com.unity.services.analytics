@@ -1,0 +1,12 @@
+<UXML xmlns="UnityEngine.UIElements">
+    <VisualElement class="project-settings-section-container">
+        <Label text="Troubleshooting" class="project-settings-title"/>
+
+        <Button name="SupportLink" class="link-button">
+            <TextElement text="Contact Support"/>
+            <VisualElement class="external-link-icon"/>
+        </Button>
+    </VisualElement>
+
+    <VisualElement class="separator"/>
+</UXML>

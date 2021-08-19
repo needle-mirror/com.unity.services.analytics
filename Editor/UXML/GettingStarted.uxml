@@ -1,0 +1,21 @@
+<UXML xmlns="UnityEngine.UIElements">
+    <VisualElement class="project-settings-section-container">
+        <Label text="Getting Started" class="project-settings-title"/>
+
+        <Label text="Unity Analytics: Access instant game data about your players. We make analytics easy!"
+               class="sub-title"/>
+
+        <VisualElement class="bullet-container">
+            <Label text="&#x2022; Where your players get frustrated" class="bullet-item"/>
+            <Label text="&#x2022; How much money your game is making" class="bullet-item"/>
+            <Label text="&#x2022; Who is spending, and more!" class="bullet-item"/>
+        </VisualElement>
+
+        <Button name="LearnMoreLink" class="link-button">
+            <TextElement text="Learn more"/>
+            <VisualElement class="external-link-icon"/>
+        </Button>
+    </VisualElement>
+
+    <VisualElement class="separator"/>
+</UXML>
