@@ -1,6 +1,6 @@
-# Analytics
+# Unity Gaming Services Analytics
 
-The Analytics package lets you record events from your application. There are
+The Unity Gaming Services Analytics package lets you record events from your application. There are
 two main types of events.
 
 Type     | Description
@@ -8,23 +8,15 @@ Type     | Description
 Standard | Standard events are predefined, some are automatic, others are manual.
 Custom   | Events that are authored by the developer that contain custom data points.
 
-## SDK Lifetime
+## Analytics Lifetime
 
-Before the runtime will start sending events you need to call the initialize method. The
-`userID` and `sessionID` are optional values; if they are not provided the SDK will
-generate random IDs.
+The Analytics SDK is started when you initialize all Unity Services:
 
 ```cs
-Events.Startup(userID, sessionID);
+await UnityServices.InitializeAsync();
 ```
 
-At the end of the session its recomended to call Shutdown to allow the internals
-to shutdown, including recording the `gameEnded` event and attempting to upload
-any waiting events.
-
-```cs
-Events.Shutdown();
-```
+At the end of the session it will also shut down automatically.
 
 ## Logging Standard Events
 
@@ -44,7 +36,7 @@ There are two standard events that you can record manually, at any point in the 
 
 The Transaction event is to record that the player spent some resource to obtain some other resource.
 This may be real or virtual currencies or game items on either side. Because of the number of optional
-arguments depending on what is being exchanged and on what platform, the LogTransaction method takes
+arguments depending on what is being exchanged and on what platform, the Transaction method takes
 a `TransactionParameters` object which can be populated as required.
 
 ```cs
@@ -60,13 +52,15 @@ Events.Transaction(new Events.TransactionParameters
 ### AdImpression Event
 
 The AdImpression event is to record that the player was shown an advert and how they interacted with it.
+Because of the number of optional arguments, the AdImpression method takes an `AdImpressionArgs` object
+which can be populated as required.
 
 ```cs
-Events.AdImpression(Events.AdCompletionStatus.Completed,
-					Events.AdProvider.UnityAds,
-					"PLACEMENT_ID",
-					"PLACEMENT_NAME",
-					null, null, null, null, null, null, null, null, null, null, null, null));
+Events.AdImpression(new Events.AdImpressionArgs(
+	Events.AdCompletionStatus.Completed,
+	Events.AdProvider.UnityAds,
+	"PLACEMENT_ID",
+	"PLACEMENT_NAME"));
 ```
 
 ## Logging Custom Events
@@ -80,7 +74,7 @@ Events.CustomData("customEventName", new Dictionary<string, object> { { "paramet
 
 ## Sending Events
 
-Event data will be flushed out of the system every 60 seconds, and on Shutdown.
+Event data will be flushed out of the system every 60 seconds, and on automatic shutdown at the end of the session.
 
 You can also force a flush at a time of your choosing:
 

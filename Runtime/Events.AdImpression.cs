@@ -7,9 +7,18 @@ namespace Unity.Services.Analytics
     {
         public enum AdCompletionStatus
         {
-            Completed, // If the ad is fully viewed and therefore will count as an impression for the ad network.
-            Partial, // If there is an option to exit the ad before generating revenue/
-            Incomplete // If the ad is not viewed at all (alternatively, don’t record the adImpression event in.
+            /// <summary>
+            /// If the ad is fully viewed and therefore will count as an impression for the ad network.
+            /// </summary>
+            Completed,
+            /// <summary>
+            /// If there is an option to exit the ad before generating revenue.
+            /// </summary>
+            Partial,
+            /// <summary>
+            /// If the ad is not viewed at all (alternatively, don’t record the adImpression event in.
+            /// </summary>
+            Incomplete
         }
 
         public enum AdProvider
@@ -33,14 +42,14 @@ namespace Unity.Services.Analytics
         }
 
         /// <summary>
-        /// Helper Object to handle arguments. 
+        /// Helper object to handle arguments for recording an AdImpression event. 
         /// </summary>
         public class AdImpressionArgs
         {
             /// <param name="adCompletionStatus">(Required) Indicates a successful Ad view. Select one of the `AdCompletionStatus` values.</param>
-            /// <param name="adProvider">(Required) The Ad sdk that provided the Ad. Select one of the `AdProvider` values.</param>
+            /// <param name="adProvider">(Required) The Ad SDK that provided the Ad. Select one of the `AdProvider` values.</param>
             /// <param name="placementID">(Required) The unique identifier for the placement as integrated into the game.</param>
-            /// <param name="placementName">(Required) If there is a place in the game that can show Ads from multiple networks there wouldn’t be a single placementId. This field compensates for that by providing a single name for your placement. Ideally, this would be an easily human-readable name such as ‘revive’ or ‘daily bonus’. This value is here for reporting purposes only.</param>
+            /// <param name="placementName">(Required) If there is a place in the game that can show Ads from multiple networks, there won’t be a single placementId. This field compensates for that by providing a single name for your placement. Ideally, this would be an easily human-readable name such as ‘revive’ or ‘daily bonus’. This value is here for reporting purposes only.</param>
             public AdImpressionArgs(AdCompletionStatus adCompletionStatus, AdProvider adProvider, string placementID, string placementName)
             {
                 this.AdCompletionStatus = adCompletionStatus;
@@ -50,38 +59,36 @@ namespace Unity.Services.Analytics
             }
 
             /// <summary>
-            /// Enter description for method anotherMethod.
-            /// ID string generated is "M:MyNamespace.MyClass.anotherMethod(System.Int16[],System.Int32[0:,0:])".
+            /// Indicates whether the Ad view was successful or not.
             /// </summary>
             public AdCompletionStatus AdCompletionStatus { get; set; }
 
             /// <summary>
-            /// Enter description for method anotherMethod.
-            /// ID string generated is "M:MyNamespace.MyClass.anotherMethod(System.Int16[],System.Int32[0:,0:])".
+            /// The Ad SDK that provided the Ad.
             /// </summary>
             public AdProvider AdProvider { get; set; }
 
             /// <summary>
-            /// Enter description for method anotherMethod.
-            /// ID string generated is "M:MyNamespace.MyClass.anotherMethod(System.Int16[],System.Int32[0:,0:])".
+            /// The unique identifier for the placement where the Ad appeared as integrated into the game.
             /// </summary>
             public string PlacementID { get; set; }
 
             /// <summary>
-            /// Enter description for method anotherMethod.
-            /// ID string generated is "M:MyNamespace.MyClass.anotherMethod(System.Int16[],System.Int32[0:,0:])".
+            /// If there is a place in the game that can show Ads from multiple networks, there won’t be a single placementId. This field compensates for that by providing a single name for your placement. Ideally, this would be an easily human-readable name such as ‘revive’ or ‘daily bonus’.
+            /// This value is here for reporting purposes only.
             /// </summary>
             public string PlacementName { get; set; }
 
             /// <summary>
             /// Optional.
-            /// The placementType should indicate what type of ad is shown, this is added for reporting purposes only.
+            /// The placementType should indicate what type of Ad is shown.
+            /// This value is here for reporting purposes only.
             /// </summary>
             public string PlacementType { get; set; }
 
             /// <summary>
             /// Optional.
-            /// The estimated Ecpm in USD, you should populate this value if you can.
+            /// The estimated ECPM in USD, you should populate this value if you can.
             /// </summary>
             public double? AdEcpmUsd { get; set; }
 
@@ -138,7 +145,7 @@ namespace Unity.Services.Analytics
         }
 
         /// <summary>
-        /// For analytics tracking the user is able to register Ad impressions.
+        /// Record an Ad Impression event.
         /// </summary>
         /// <param name="args">(Required) Helper object to handle arguments.</param>
         public static void AdImpression(AdImpressionArgs args)

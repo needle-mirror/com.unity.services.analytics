@@ -7,8 +7,7 @@ namespace Unity.Services.Analytics
     public static partial class Events
     {
         /// <summary>
-        /// Sending custom data to the UA2 backend. This requires that the schema exists on the backend or your data
-        /// will be rejected.
+        /// Record a custom event. A schema for this event must exist on the dashboard or it will be ignored.
         /// </summary>
         public static void CustomData(string eventName, IDictionary<string, object> eventParams)
         {

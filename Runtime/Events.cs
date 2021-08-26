@@ -48,11 +48,11 @@ namespace Unity.Services.Analytics
             s_CommonParams.GameBundleID = Application.identifier;
             s_CommonParams.Platform = Platform.Runtime.Name();
             s_CommonParams.BuildGuuid = Application.buildGUID;
-            s_CommonParams.Idfv = DeviceIdentifiers.Idfv;
+            s_CommonParams.Idfv = DeviceIdentifiersInternal.Idfv;
             
             SetVariableCommonParams();
             
-            DeviceIdentifiers.SetupIdentifiers();
+            DeviceIdentifiersInternal.SetupIdentifiers();
             
             #if UNITY_ANALYTICS_DEVELOPMENT
             Debug.LogFormat("UA2 Setup\nSessionID:{0}", s_SessionID);
@@ -89,7 +89,7 @@ namespace Unity.Services.Analytics
 
         internal static void NewPlayerEvent()
         {
-            if (InstallId != null && new NewPlayerHelper(InstallId).IsNewPlayer())
+            if (InstallId != null && new InternalNewPlayerHelper(InstallId).IsNewPlayer())
             {
                 Data.Generator.NewPlayer(ref dataBuffer, DateTime.UtcNow, s_CommonParams, s_StartUpCallingId, SystemInfo.deviceModel);
             }
@@ -115,7 +115,7 @@ namespace Unity.Services.Analytics
         }
         
         // <summary>
-        // Forces an internal tick to flush out data.
+        // Forces an immediately upload of all recorded events to the server, if there is an internet connection.
         // </summary>
         public static void Flush()
         {
@@ -136,7 +136,7 @@ namespace Unity.Services.Analytics
         static void SetVariableCommonParams()
         {
             s_CommonParams.UserCountry = Analytics.Internal.Platform.UserCountry.Name();
-            s_CommonParams.Idfa = DeviceIdentifiers.Idfa;
+            s_CommonParams.Idfa = DeviceIdentifiersInternal.Idfa;
             s_CommonParams.DeviceVolume = DeviceVolumeProvider.GetDeviceVolume();
             s_CommonParams.BatteryLoad = SystemInfo.batteryLevel;
             s_CommonParams.UasUserID = PlayerId != null ? PlayerId.PlayerId : null;

@@ -35,7 +35,7 @@ namespace Unity.Services.Analytics
             // This is a very simple mechanism to flush the buffer, it might not be the most graceful, it might
             // not be the most graceful, but we can add the complexity later when its needed.
             // Once every 'n' flush the Events, then reset the timer.
-            m_Time += Time.fixedDeltaTime;
+            m_Time += Time.deltaTime;
             
             if (m_Time >= 60.0F)
             {

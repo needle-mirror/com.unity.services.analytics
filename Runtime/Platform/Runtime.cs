@@ -28,6 +28,9 @@ namespace Unity.Services.Analytics.Platform
 
     public static class Runtime
     {
+        /// <summary>
+        /// Returns the name of the platform this app is running on.
+        /// </summary>
         public static string Name()
         {
             return GetPlatform().ToString();

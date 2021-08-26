@@ -54,7 +54,11 @@ namespace Unity.Services.Analytics
         {
             //Optional
             public bool? isInitiator;
-            public string paymentCountry; /* If null or empty the machines locale will be used */
+            /// <summary>
+            /// Optional.
+            /// If this is left null or empty, the machine's locale will be used
+            /// </summary>
+            public string paymentCountry;
             public string productID;
             public Int64? revenueValidated;
             public string transactionID;
@@ -74,8 +78,9 @@ namespace Unity.Services.Analytics
         }
         
         /// <summary>
-        /// Transaction Events can be used to track transactions on the dashboard.
+        /// Record a Transaction event.
         /// </summary>
+        /// <param name="transactionParameters">(Required) Helper object to handle parameters.</param>
         public static void Transaction(TransactionParameters transactionParameters)
         {
             Debug.Assert(!string.IsNullOrEmpty(transactionParameters.transactionName), "Required to have a value for transactionName");
