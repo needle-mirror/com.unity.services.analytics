@@ -1,12 +1,13 @@
 using System;
 using System.Reflection;
 using Unity.Services.Core.Editor;
+using UnityEditor.Analytics;
 using UnityEditor.Purchasing;
 
 namespace Unity.Services.Analytics.Editor
 {
     /// <remarks>
-    /// This script is required to properly set the settings for IAP when Analytics is disabled 
+    /// This script is required to properly set the settings for IAP from Analytics when disabling
     /// </remarks>
     class PurchasingServiceEnabler : EditorGameServiceFlagEnabler
     {
@@ -65,4 +66,4 @@ namespace Unity.Services.Analytics.Editor
             }
         }
     }
-} 
+}

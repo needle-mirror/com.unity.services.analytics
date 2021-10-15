@@ -1,10 +1,9 @@
 {
     "name": "Unity.Services.Analytics.Editor",
+    "rootNamespace": "",
     "references": [
-        "Unity.Services.Core.Internal",
-        "Unity.Services.Core.Editor",
         "Unity.Services.Core",
-        "Unity.Services.Analytics"
+        "Unity.Services.Core.Editor"
     ],
     "includePlatforms": [
         "Editor"

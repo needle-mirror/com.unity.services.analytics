@@ -1,20 +1,9 @@
 {
   "name": "com.unity.services.analytics",
-  "displayName": "Analytics",
-  "version": "2.0.7-pre.4",
+  "displayName": "Unity Analytics SDK",
+  "version": "1.0.3",
   "unity": "2019.4",
-  "description": "The Unity Analytics package automatically collects core events and user properties when someone uses your game or application, and enables you to track specific in-game actions your user performs by defining custom events. The data collected from this package is surfaced in the Unity dashboard where you can use it to gather user insights, segment your player base and make informed decisions around the optimization of your game.",
-  "dependencies": {
-    "com.unity.services.analytics-runtime": "1.0.0-pre.2",
-    "com.unity.ugui": "1.0.0"
-  },
-  "samples": [
-    {
-      "displayName": "Analytics Samples",
-      "description": "Some basic usage examples.",
-      "path": "Samples~"
-    }
-  ],
+  "description": "This package allows you to capture, store and deliver events for your application.",
   "_upm": {
     "gameService": {
       "groupIndex": 3,
@@ -35,15 +24,18 @@
       "Windows 10 Universal"
     ]
   },
+  "dependencies": {
+    "com.unity.services.core": "1.0.1"
+  },
   "relatedPackages": {
-    "com.unity.services.analytics.tests": "2.0.7-pre.4"
+    "com.unity.services.analytics.tests": "1.0.3"
   },
   "upmCi": {
-    "footprint": "fb50f986e521a4b24a6e376bde6661b8c2bc4873"
+    "footprint": "48d8e37a26c3bfe07433474e941f47e5a561fc23"
   },
   "repository": {
     "url": "https://github.cds.internal.unity3d.com/unity/Catapult.mono.git",
     "type": "git",
-    "revision": "f79886f7f4ed34ff6e84e040dcc9b1b828435489"
+    "revision": "e5942707e649bfb6ad76d3667cffa8caaac08948"
   }
 }

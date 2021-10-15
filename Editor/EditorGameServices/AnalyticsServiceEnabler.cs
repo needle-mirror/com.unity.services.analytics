@@ -8,7 +8,7 @@ namespace Unity.Services.Analytics.Editor
     class AnalyticsServiceEnabler : EditorGameServiceFlagEnabler
     {
         protected override string FlagName { get; } = "analytics";
-
+        
         bool m_IsEnabled = GetProjectSettingWithReflection();
         PurchasingServiceEnabler m_PurchasingEnabler = new PurchasingServiceEnabler();
 
@@ -30,10 +30,10 @@ namespace Unity.Services.Analytics.Editor
             AnalyticsSettings.enabled = false;
             m_IsEnabled = false;
             
-            // when Analytics is disabled, IAP must also be disabled
+            // When Analytics is disabled, IAP must be disabled
             m_PurchasingEnabler.Disable();
         }
-
+        
         const string k_ProjectSettingName = "Analytics";
 
         static bool GetProjectSettingWithReflection()

@@ -23,6 +23,7 @@ namespace Unity.Services.Analytics.Editor
 
         static void OnLearnMoreClicked()
         {
+            EditorGameServiceAnalyticsSender.SendProjectSettingsLearnMoreEvent();
             Application.OpenURL(UiConstants.Urls.LearnMore);
         }
     }

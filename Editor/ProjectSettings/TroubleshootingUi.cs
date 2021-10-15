@@ -23,6 +23,7 @@ namespace Unity.Services.Analytics.Editor
 
         static void OnContactSupportClicked()
         {
+            EditorGameServiceAnalyticsSender.SendProjectSettingsContactSupportEvent();
             Application.OpenURL(UiConstants.Urls.Support);
         }
     }

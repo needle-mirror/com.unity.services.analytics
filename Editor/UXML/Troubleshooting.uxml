@@ -2,10 +2,10 @@
     <VisualElement class="project-settings-section-container">
         <Label text="Troubleshooting" class="project-settings-title"/>
 
-        <Button name="SupportLink" class="link-button">
-            <TextElement text="Contact Support"/>
+        <VisualElement name="SupportLink" class="link-container">
+            <TextElement text="Contact Support" class="link-button"/>
             <VisualElement class="external-link-icon"/>
-        </Button>
+        </VisualElement>
     </VisualElement>
 
     <VisualElement class="separator"/>

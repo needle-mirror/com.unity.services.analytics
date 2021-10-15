@@ -11,6 +11,7 @@ namespace Unity.Services.Analytics.Editor
         [MenuItem(k_ServiceMenuRoot + "Configure", priority = k_ConfigureMenuPriority)]
         static void ShowProjectSettings()
         {
+            EditorGameServiceAnalyticsSender.SendTopMenuConfigureEvent();
             var path = AnalyticsSettingsProvider.GetSettingsPath();
             SettingsService.OpenProjectSettings(path);
         }

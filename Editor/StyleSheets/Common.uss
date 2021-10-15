@@ -21,27 +21,22 @@
     white-space: normal;
 }
 
+.link-container {
+    flex-direction:row;
+    padding:8px 4px 4px 8px;
+}
+
 .link-button > .unity-text-element {
     cursor: link;
     flex-grow: 0;
 }
 
-.link-button:hover > .unity-text-element {
-    cursor: link;
-    color: #81B4FF; /*from dark.uss --unity-active-text-color*/
+.analytics .service-icon {
+    background-image: resource("Builtin Skins/Shared/Images/ServicesWindow-ServiceIcon-Analytics.png");
 }
 
 .external-link-icon {
-    width: 16px;
-    height: 16px;
-    cursor: link;
     margin-left: 5px;
-    -unity-background-image-tint-color: #D2D2D2; /*from dark.uss --unity-text-color*/
-    background-image: resource("Builtin Skins/Shared/Images/ServicesWindow-ExternalLink.png");
-}
-
-.analytics .service-icon {
-    background-image: resource("Builtin Skins/Shared/Images/ServicesWindow-ServiceIcon-Analytics.png");
 }
 
 .note-tag{
