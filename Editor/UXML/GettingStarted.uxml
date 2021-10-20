@@ -11,10 +11,10 @@
             <Label text="&#x2022; Who is spending, and more!" class="bullet-item"/>
         </VisualElement>
 
-        <Button name="LearnMoreLink" class="link-button">
-            <TextElement text="Learn more"/>
+        <VisualElement name="LearnMoreLink" class="link-container">
+            <TextElement text="Learn more" class="link-button"/>
             <VisualElement class="external-link-icon"/>
-        </Button>
+        </VisualElement>
     </VisualElement>
 
     <VisualElement class="separator"/>

@@ -24,8 +24,9 @@ namespace Unity.Services.Analytics.Data
         internal string BuildGuuid { get; set; }
         internal string ClientVersion { get; set; }
         internal string UserCountry { get; set; }
+        internal string ProjectID { get; set; }
 
-        internal void SerializeCommonEventParams(ref Analytics.Internal.Buffer buf, string callingMethodIdentifier)
+        internal void SerializeCommonEventParams(ref Analytics.Internal.IBuffer buf, string callingMethodIdentifier)
         {
             if (!string.IsNullOrEmpty(GameStoreID))
             {
@@ -89,6 +90,11 @@ namespace Unity.Services.Analytics.Data
             if (BatteryLoad != null)
             {
                 buf.PushDouble(BatteryLoad.Value, "batteryLoad"); // Schema: Optional
+            }
+
+            if (!string.IsNullOrEmpty(ProjectID))
+            {
+                buf.PushString(ProjectID, "projectID");
             }
             
             // Schema: Required

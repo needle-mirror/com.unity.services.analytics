@@ -1,6 +1,5 @@
-using System.Runtime.CompilerServices;
 using System;
-using UnityEngine;
+using System.Runtime.CompilerServices;
 
 [assembly: InternalsVisibleTo("Unity.Services.Analytics.Tests")]
 
@@ -15,7 +14,7 @@ namespace Unity.Services.Analytics.Data
     /// </summary>
     static class Generator
     {
-        internal static void SdkStartup(ref Analytics.Internal.Buffer buf, DateTime datetime, StdCommonParams commonParams, string callingMethodIdentifier)
+        internal static void SdkStartup(ref Analytics.Internal.IBuffer buf, DateTime datetime, StdCommonParams commonParams, string callingMethodIdentifier)
         {
             // Schema: http://go/UA2_SDKStart_v1
 
@@ -29,7 +28,7 @@ namespace Unity.Services.Analytics.Data
             buf.PushEndEvent();
         }
 
-        internal static void GameRunning(ref Analytics.Internal.Buffer buf, DateTime datetime, StdCommonParams commonParams, string callingMethodIdentifier)
+        internal static void GameRunning(ref Analytics.Internal.IBuffer buf, DateTime datetime, StdCommonParams commonParams, string callingMethodIdentifier)
         {
             // Schema: http://go/UA2_GameRunning_v1
             
@@ -41,7 +40,7 @@ namespace Unity.Services.Analytics.Data
             buf.PushEndEvent();
         }
 
-        internal static void NewPlayer(ref Analytics.Internal.Buffer buf, DateTime datetime, StdCommonParams commonParams, string callingMethodIdentifier, string deviceModel)
+        internal static void NewPlayer(ref Analytics.Internal.IBuffer buf, DateTime datetime, StdCommonParams commonParams, string callingMethodIdentifier, string deviceModel)
         {
             // Schema: http://go/UA2_NewPlayer_v1
             
@@ -57,7 +56,7 @@ namespace Unity.Services.Analytics.Data
         }
 
         internal static void GameStarted(
-            ref Analytics.Internal.Buffer buf,
+            ref Analytics.Internal.IBuffer buf,
             DateTime datetime,
             StdCommonParams commonParams,
             string callingMethodIdentifier,
@@ -76,7 +75,10 @@ namespace Unity.Services.Analytics.Data
             buf.PushString(userLocale, "userLocale");
             
             // Schema: Optional
-            buf.PushString(idLocalProject, "idLocalProject");
+            if (!String.IsNullOrEmpty(idLocalProject))
+            {
+                buf.PushString(idLocalProject, "idLocalProject");
+            }
             buf.PushString(osVersion, "osVersion");
             buf.PushBool(isTiny, "isTiny");
             buf.PushBool(debugDevice, "debugDevice");
@@ -96,7 +98,7 @@ namespace Unity.Services.Analytics.Data
             QUIT,
         }
         
-        internal static void GameEnded(ref Analytics.Internal.Buffer buf, DateTime datetime, StdCommonParams commonParams, string callingMethodIdentifier, SessionEndState quitState)
+        internal static void GameEnded(ref Analytics.Internal.IBuffer buf, DateTime datetime, StdCommonParams commonParams, string callingMethodIdentifier, SessionEndState quitState)
         {
             // Schema: http://go/UA2_GameEnded_v1
             
@@ -111,7 +113,7 @@ namespace Unity.Services.Analytics.Data
         }
 
         internal static void AdImpression(
-            ref Analytics.Internal.Buffer buf,
+            ref Analytics.Internal.IBuffer buf,
             DateTime datetime,
             StdCommonParams commonParams,
             string callingMethodIdentifier,
@@ -212,7 +214,7 @@ namespace Unity.Services.Analytics.Data
         }
 
         internal static void Transaction(
-            ref Analytics.Internal.Buffer buf,
+            ref Analytics.Internal.IBuffer buf,
             DateTime datetime,
             StdCommonParams commonParams,
             string callingMethodIdentifier,
@@ -229,11 +231,6 @@ namespace Unity.Services.Analytics.Data
             if (!string.IsNullOrEmpty(SdkVersion.SDK_VERSION))
             {
                 buf.PushString(SdkVersion.SDK_VERSION, "sdkVersion");
-            }
-
-            if (transactionParameters.isInitiator.HasValue)
-            {
-                buf.PushBool(transactionParameters.isInitiator.Value, "isInitiator");
             }
 
             if (!string.IsNullOrEmpty(transactionParameters.paymentCountry))
@@ -306,7 +303,7 @@ namespace Unity.Services.Analytics.Data
         }
 
         internal static void ClientDevice(
-            ref Analytics.Internal.Buffer buf,
+            ref Analytics.Internal.IBuffer buf,
             DateTime datetime,
             StdCommonParams commonParams,
             string callingMethodIdentifier,
@@ -334,7 +331,7 @@ namespace Unity.Services.Analytics.Data
             buf.PushEndEvent();
         }
 
-        static void SetProduct(ref Analytics.Internal.Buffer buf, string productName, Events.Product product)
+        static void SetProduct(ref Analytics.Internal.IBuffer buf, string productName, Events.Product product)
         {
             buf.PushObjectStart(productName);
 

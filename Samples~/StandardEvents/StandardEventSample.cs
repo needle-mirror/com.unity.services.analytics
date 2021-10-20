@@ -148,7 +148,6 @@ namespace Unity.Services.Analytics
         {
             Events.Transaction(new Events.TransactionParameters
             {
-                isInitiator = false,
                 paymentCountry = "PL",
                 productID = "productid987",
                 revenueValidated = 999,

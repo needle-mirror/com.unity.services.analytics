@@ -26,18 +26,8 @@
     flex-grow: 0;
 }
 
-.link-button:hover > .unity-text-element {
-    cursor: link;
-    color: #81B4FF; /*from dark.uss --unity-active-text-color*/
-}
-
 .external-link-icon {
-    width: 16px;
-    height: 16px;
-    cursor: link;
     margin-left: 5px;
-    -unity-background-image-tint-color: #D2D2D2; /*from dark.uss --unity-text-color*/
-    background-image: resource("Builtin Skins/Shared/Images/ServicesWindow-ExternalLink.png");
 }
 
 .analytics .service-icon {

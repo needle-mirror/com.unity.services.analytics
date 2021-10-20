@@ -1,4 +1,3 @@
-#if ENABLE_CLOUD_SERVICES_ANALYTICS
 using System;
 using System.Text;
 using System.Threading.Tasks;
@@ -7,6 +6,8 @@ using UnityEngine.Networking;
 
 namespace Unity.Services.Analytics.DataPrivacy
 {
+    [Obsolete("Developers should implement their own consent button by presenting Events.PrivacyUrl to users," +
+              "and calling Events.OptOut() should they refuse consent")]
     public class DataPrivacy
     {
         [Serializable]
@@ -84,6 +85,7 @@ namespace Unity.Services.Analytics.DataPrivacy
             return error;
         }
 
+        [Obsolete("The privacy policy page URL can be found using Events.PrivacyUrl")]
         public static async Task<string> FetchPrivacyUrlAsync()
         {
             string postJson = JsonUtility.ToJson(GetUserData());
@@ -113,4 +115,3 @@ namespace Unity.Services.Analytics.DataPrivacy
         }
     }
 }
-#endif //ENABLE_CLOUD_SERVICES_ANALYTICS

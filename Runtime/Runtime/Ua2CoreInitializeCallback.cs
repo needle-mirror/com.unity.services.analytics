@@ -14,27 +14,26 @@ class Ua2CoreInitializeCallback : IInitializablePackage
     {
         CoreRegistry.Instance.RegisterPackage(new Ua2CoreInitializeCallback())
             .DependsOn<IInstallationId>()
+            .DependsOn<IEnvironments>()
             .OptionallyDependsOn<IPlayerId>();
     }
 
     public Task Initialize(CoreRegistry registry)
     {
         IInstallationId installationId = registry.GetServiceComponent<IInstallationId>();
-        Events.InstallId = installationId;
-        
-        IPlayerId playerId = CoreRegistry.Instance.GetServiceComponent<IPlayerId>();
-        Events.PlayerId = playerId;
+        IPlayerId playerId = registry.GetServiceComponent<IPlayerId>();
+        IEnvironments environments = registry.GetServiceComponent<IEnvironments>();
 
-        IEnvironments environments = CoreRegistry.Instance.GetServiceComponent<IEnvironments>();
-        Events.SetEnvironment(environments.Current);
+        Events.Initialize(installationId, playerId, environments.Current);
         
         #if UNITY_ANALYTICS_DEVELOPMENT
         Debug.LogFormat("Core Initialize Callback\nInstall ID: {0}\nPlayer ID: {1}",
             installationId.GetOrCreateIdentifier(),
-            playerId.PlayerId);
+            playerId?.PlayerId);
         #endif
         
         Events.NewPlayerEvent();
+        Events.Flush();
 
         return Task.CompletedTask;
     }

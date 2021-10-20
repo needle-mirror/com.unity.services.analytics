@@ -32,10 +32,12 @@ namespace Unity.Services.Analytics
 
         void Update()
         {
-            // This is a very simple mechanism to flush the buffer, it might not be the most graceful, it might
-            // not be the most graceful, but we can add the complexity later when its needed.
+            // This is a very simple mechanism to flush the buffer, it might not be the most graceful,
+            // but we can add the complexity later when its needed.
             // Once every 'n' flush the Events, then reset the timer.
-            m_Time += Time.deltaTime;
+            // Use unscaled time in case the user sets timeScale to anything other than 1 (e.g. to 0 to pause their game),
+            // we always want to send events on the same real-time cadence regardless of framerate or user interference.
+            m_Time += Time.unscaledDeltaTime;
             
             if (m_Time >= 60.0F)
             {
@@ -70,6 +72,12 @@ namespace Unity.Services.Analytics
 
                 s_Created = true;
             }
+        }
+
+        public static void DestroyContainer()
+        {
+            GameObject.Destroy(s_Container);
+            s_Created = false;
         }
     }
 }

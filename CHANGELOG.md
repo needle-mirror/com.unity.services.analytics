@@ -4,6 +4,29 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [2.0.7-pre.7] - 2021-10-20
+
+### Added
+
+* projectID parameter to all events
+
+### Fixed
+
+* GameStart event `idLocalProject` having a nonsense value
+* Heartbeat cadence being affected by Time Scale
+* Failing to compile for WebGL with error " The type or namespace name 'DllImportAttribute' could not be found"
+
+### Changed
+
+* User opt-out of data collection. Developers must expose this mechanism to users in an appropriate way:
+  * Give users access to the privacy policy, the URL for which is stored in the `Events.PrivacyUrl` property
+  * Disable analytics if requested using the `Events.OptOut()` method
+
+### Removed
+
+* Deprecated Transaction event `isInitiator` parameter
+* Deprecated previous opt-out mechanism (DataPrivacy and DataPrivacyButton)
+
 ## [2.0.7-pre.6] - 2021-08-26
 
 ### Fixed

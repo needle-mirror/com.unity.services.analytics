@@ -1,10 +1,14 @@
-#if ENABLE_CLOUD_SERVICES_ANALYTICS
 using System;
 using UnityEngine;
 using UnityEngine.UI;
+#if UNITY_WEBGL && !UNITY_EDITOR
+using System.Runtime.InteropServices;
+#endif
 
 namespace Unity.Services.Analytics.DataPrivacy
 {
+    [Obsolete("Developers should implement their own consent button by presenting Events.PrivacyUrl to users," +
+              "and calling Events.OptOut() should they refuse consent")]
     public class DataPrivacyButton : Button
     {
 #if UNITY_WEBGL && !UNITY_EDITOR
@@ -29,11 +33,11 @@ namespace Unity.Services.Analytics.DataPrivacy
             interactable = true;
             urlOpened = true;
 
-        #if UNITY_WEBGL && !UNITY_EDITOR
+#if UNITY_WEBGL && !UNITY_EDITOR
             OpenNewWindow(url);
-        #else
+#else
             Application.OpenURL(url);
-        #endif
+#endif
         }
 
         async void OpenDataPrivacyUrl()
@@ -63,4 +67,3 @@ namespace Unity.Services.Analytics.DataPrivacy
         }
     }
 }
-#endif //ENABLE_CLOUD_SERVICES_ANALYTICS

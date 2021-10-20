@@ -52,7 +52,7 @@ namespace Unity.Services.Analytics
     
         public struct TransactionParameters
         {
-            //Optional
+            [Obsolete]
             public bool? isInitiator;
             /// <summary>
             /// Optional.
