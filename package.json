@@ -1,13 +1,11 @@
 {
   "name": "com.unity.services.analytics",
-  "displayName": "Unity Analytics SDK",
-  "version": "1.0.3",
+  "displayName": "Analytics Legacy",
+  "version": "1.0.4",
   "unity": "2019.4",
   "description": "This package allows you to capture, store and deliver events for your application.",
   "_upm": {
     "gameService": {
-      "groupIndex": 3,
-      "groupName": "Analytics",
       "genericDashboardUrl": "https://dashboard.unity3d.com/analytics",
       "projectDashboardUrl": "https://dashboard.unity3d.com/organizations/{0}/projects/{1}/analytics/events",
       "projectDashboardUrlType": "OrganizationKeyAndProjectGuid",
@@ -28,14 +26,14 @@
     "com.unity.services.core": "1.0.1"
   },
   "relatedPackages": {
-    "com.unity.services.analytics.tests": "1.0.3"
+    "com.unity.services.analytics.tests": "1.0.4"
   },
   "upmCi": {
-    "footprint": "48d8e37a26c3bfe07433474e941f47e5a561fc23"
+    "footprint": "005cc19c1027897f370220685b55801d0327f0a8"
   },
   "repository": {
     "url": "https://github.cds.internal.unity3d.com/unity/Catapult.mono.git",
     "type": "git",
-    "revision": "e5942707e649bfb6ad76d3667cffa8caaac08948"
+    "revision": "93d915649b9430704f76b17806f2b406c9f8f168"
   }
 }
