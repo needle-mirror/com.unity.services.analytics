@@ -4,6 +4,18 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [3.0.0-pre.2] - 2021-12-02
+
+* Analytics Runtime dependency has been updated, the PIPL headers are now included in `ForgetMe` event, when appropriate.
+
+## [3.0.0-pre.1] - 2021-11-26
+
+### Added
+
+**Breaking Change**: 
+- New APIs provided for checking if PIPL consent is needed, and recording users' consent. 
+  It is now required to check if any consent is required, and provide that consent if necessary, before the events will be sent from the SDK.
+
 ## [2.0.7-pre.7] - 2021-10-20
 
 ### Added

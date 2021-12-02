@@ -1,11 +1,12 @@
 {
   "name": "com.unity.services.analytics",
   "displayName": "Analytics",
-  "version": "2.0.7-pre.7",
+  "version": "3.0.0-pre.2",
   "unity": "2019.4",
   "description": "The Unity Analytics package automatically collects core events and user properties when someone uses your game or application, and enables you to track specific in-game actions your user performs by defining custom events. The data collected from this package is surfaced in the Unity dashboard where you can use it to gather user insights, segment your player base and make informed decisions around the optimization of your game.",
+  "documentationUrl": "https://docs.unity.com/analytics/",
   "dependencies": {
-    "com.unity.services.analytics-runtime": "1.0.0-pre.3",
+    "com.unity.services.analytics-runtime": "2.0.0-pre.2",
     "com.unity.ugui": "1.0.0"
   },
   "samples": [
@@ -36,14 +37,14 @@
     ]
   },
   "relatedPackages": {
-    "com.unity.services.analytics.tests": "2.0.7-pre.7"
+    "com.unity.services.analytics.tests": "3.0.0-pre.2"
   },
   "upmCi": {
-    "footprint": "fc0a30bf47331674e54469f1db287db16d5f3bbd"
+    "footprint": "3cbc765551da63dd7e37fab71564e9d574ffd834"
   },
   "repository": {
     "url": "https://github.cds.internal.unity3d.com/unity/Catapult.mono.git",
     "type": "git",
-    "revision": "3a5f086f03654de4d3b25d51086c6f2ceece1266"
+    "revision": "bef8e0ad4c4be7b4325321f552f6be00ff43eaf8"
   }
 }

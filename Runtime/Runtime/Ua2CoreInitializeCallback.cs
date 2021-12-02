@@ -33,7 +33,10 @@ class Ua2CoreInitializeCallback : IInitializablePackage
         #endif
         
         Events.NewPlayerEvent();
-        Events.Flush();
+        if (Events.ConsentTracker.IsGeoIpChecked())
+        {
+            Events.Flush();
+        }
 
         return Task.CompletedTask;
     }

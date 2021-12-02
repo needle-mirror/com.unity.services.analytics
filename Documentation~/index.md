@@ -1,5 +1,7 @@
 # Unity Gaming Services Analytics
 
+**For full documentation, visit https://docs.unity.com/analytics/**
+
 The Unity Gaming Services Analytics package lets you record events from your application. There are
 two main types of events.
 
