@@ -36,7 +36,7 @@ namespace Unity.Services.Analytics.Editor
 
         public static class LocalizedStrings
         {
-            public static readonly string Title = L10n.Tr("Analytics");
+            public static readonly string Title = L10n.Tr("Legacy Analytics");
 
             public static readonly string Description = L10n.Tr("Discover player insights");
         }

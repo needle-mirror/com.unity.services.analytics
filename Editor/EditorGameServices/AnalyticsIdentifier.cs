@@ -8,6 +8,6 @@ namespace Unity.Services.Analytics.Editor
     public struct AnalyticsIdentifier : IEditorGameServiceIdentifier
     {
         /// <inheritdoc/>
-        public string GetKey() => "Analytics";
+        public string GetKey() => "Legacy Analytics";
     }
 }

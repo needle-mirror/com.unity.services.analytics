@@ -1,7 +1,7 @@
 {
   "name": "com.unity.services.analytics",
-  "displayName": "Analytics Legacy",
-  "version": "1.0.4",
+  "displayName": "Legacy Analytics",
+  "version": "1.0.5",
   "unity": "2019.4",
   "description": "This package allows you to capture, store and deliver events for your application.",
   "_upm": {
@@ -26,14 +26,14 @@
     "com.unity.services.core": "1.0.1"
   },
   "relatedPackages": {
-    "com.unity.services.analytics.tests": "1.0.4"
+    "com.unity.services.analytics.tests": "1.0.5"
   },
   "upmCi": {
-    "footprint": "005cc19c1027897f370220685b55801d0327f0a8"
+    "footprint": "93deb809fb929b62b855a84822fc8633a21a16d4"
   },
   "repository": {
     "url": "https://github.cds.internal.unity3d.com/unity/Catapult.mono.git",
     "type": "git",
-    "revision": "93d915649b9430704f76b17806f2b406c9f8f168"
+    "revision": "8a37ae19c90384aea7f67e99db92cb0b80c1f4cb"
   }
 }

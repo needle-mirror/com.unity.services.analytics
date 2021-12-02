@@ -2,7 +2,7 @@
     <VisualElement class="project-settings-section-container">
         <Label text="Getting Started" class="project-settings-title"/>
 
-        <Label text="Unity Analytics: Access instant game data about your players. We make analytics easy!"
+        <Label text="Legacy Analytics: Access instant game data about your players. We make analytics easy!"
                class="sub-title"/>
 
         <VisualElement class="bullet-container">

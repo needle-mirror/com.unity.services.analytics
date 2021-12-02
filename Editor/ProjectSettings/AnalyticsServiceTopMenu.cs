@@ -6,7 +6,7 @@ namespace Unity.Services.Analytics.Editor
     static class AnalyticsServiceTopMenu
     {
         const int k_ConfigureMenuPriority = 100;
-        const string k_ServiceMenuRoot = "Services/Analytics/";
+        const string k_ServiceMenuRoot = "Services/Legacy Analytics/";
 
         [MenuItem(k_ServiceMenuRoot + "Configure", priority = k_ConfigureMenuPriority)]
         static void ShowProjectSettings()

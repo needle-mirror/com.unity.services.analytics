@@ -7,7 +7,7 @@ namespace Unity.Services.Analytics.Editor
 {
     class AnalyticsService : IEditorGameService
     {
-        public string Name { get; } = "Analytics";
+        public string Name { get; } = "Legacy Analytics";
 
         public IEditorGameServiceIdentifier Identifier { get; } = new AnalyticsIdentifier();
 
