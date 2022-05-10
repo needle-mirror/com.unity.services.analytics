@@ -27,7 +27,7 @@ namespace Unity.Services.Analytics
             Debug.Assert(!string.IsNullOrEmpty(acquisitionSourceParameters.Provider),
                 "Required to have a value for provider");
 
-            dataGenerator.AcquisitionSource(ref dataBuffer, DateTime.UtcNow, m_CommonParams,
+            dataGenerator.AcquisitionSource(ref dataBuffer, DateTime.Now, m_CommonParams,
                 "com.unity.services.analytics.events.acquisitionSource", acquisitionSourceParameters);
         }
     }

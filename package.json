@@ -1,7 +1,7 @@
 {
   "name": "com.unity.services.analytics",
   "displayName": "Analytics",
-  "version": "4.0.0-pre.2",
+  "version": "4.0.0-pre.3",
   "unity": "2019.4",
   "description": "The Unity Analytics package automatically collects core events and user properties when someone uses your game or application, and enables you to track specific in-game actions your user performs by defining custom events. The data collected from this package is surfaced in the Unity dashboard where you can use it to gather user insights, segment your player base and make informed decisions around the optimization of your game.",
   "dependencies": {
@@ -16,34 +16,17 @@
     }
   ],
   "_upm": {
-    "gameService": {
-      "genericDashboardUrl": "https://dashboard.unity3d.com/analytics",
-      "projectDashboardUrl": "https://dashboard.unity3d.com/organizations/{0}/projects/{1}/analytics/events",
-      "projectDashboardUrlType": "OrganizationKeyAndProjectGuid",
-      "configurePath": "Project/Services/Analytics"
-    },
-    "supportedPlatforms": [
-      "Android",
-      "iOS",
-      "Linux",
-      "Mac",
-      "PC",
-      "Windows 8.1 Universal",
-      "Windows 10 Universal"
-    ]
-  },
-  "upm": {
-    "changelog": "### New\n\n* Added a new event (`transactionFailed`) for recording failed transactions\n\n### Changed\n\n* IDFA usage has also been removed from the SDK - this identifier will no longer be added to events automatically when available.\n* This release restores the previous `Events` API for backwards compatability with `3.0.0` versions of the SDK. This API will be removed in a future release."
+    "changelog": "### Fixed\n\n* Events will now consistently use local time + offset for timestamps\n* Fixes an issue that could occur when the SDK was disabled"
   },
   "relatedPackages": {
-    "com.unity.services.analytics.tests": "4.0.0-pre.2"
+    "com.unity.services.analytics.tests": "4.0.0-pre.3"
   },
   "upmCi": {
-    "footprint": "135c7c0c3712abb42eb9155c95bee0704e18c8e9"
+    "footprint": "2d8a840b15d33cee55969b3420efdf90251b7c51"
   },
   "repository": {
     "url": "https://github.cds.internal.unity3d.com/unity/operate-services-sdk.git",
     "type": "git",
-    "revision": "0f4a6f351fb4e148ac5d239a792b1462cc738ef0"
+    "revision": "8406f10cbb2635cbc052b6519fce1c055a5330ff"
   }
 }

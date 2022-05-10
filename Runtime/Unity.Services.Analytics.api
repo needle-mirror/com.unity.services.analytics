@@ -268,7 +268,7 @@ namespace Unity.Services.Analytics
     public struct TransactionFailedParameters
     {
         public string AmazonUserID;
-        public string EngagementID;
+        public System.Nullable<long> EngagementID;
         public string FailureReason;
         public string GameStoreID;
         public System.Nullable<bool> IsInitiator;

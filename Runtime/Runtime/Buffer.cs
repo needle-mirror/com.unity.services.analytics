@@ -330,12 +330,12 @@ namespace Unity.Services.Analytics.Internal
 
         public static string SaveDateTime(DateTime dateTime)
         {
-            return dateTime.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
+            return dateTime.ToString("yyyy-MM-dd HH:mm:ss zzz", CultureInfo.InvariantCulture);
         }
 
         static DateTime ParseDateTime(string dateTime)
         {
-            return DateTime.ParseExact(dateTime, "yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture);
+            return DateTime.ParseExact(dateTime, "yyyy-MM-dd HH:mm:ss zzz", CultureInfo.InvariantCulture);
         }
 
         bool IsRequestOverSizeLimit(string data)
@@ -597,9 +597,9 @@ namespace Unity.Services.Analytics.Internal
                         }
                     }
                 }
-                catch (Exception)
+                catch (Exception e)
                 {
-                    Debug.LogWarning($"Error loading cached events: file was corrupt (probably due to improper app/system shutdown). Cached events have been discarded and other operations will continue as normal.");
+                    Debug.LogWarning($"Error loading cached events: file was corrupt (probably due to improper app/system shutdown). Cached events have been discarded and other operations will continue as normal. Error was {e.Message}");
                     m_DiskCacheSize = 0;
                     m_DiskCacheLastFlushedToken = 0;
                 }
@@ -678,7 +678,7 @@ namespace Unity.Services.Analytics.Internal
         {
             // Serialize event
 
-            var dateTime = DateTime.UtcNow;
+            var dateTime = DateTime.Now;
             PushStartEvent(evt.Name, dateTime, evt.Version);
 
             // Serialize event params

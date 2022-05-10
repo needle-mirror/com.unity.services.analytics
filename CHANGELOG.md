@@ -4,7 +4,14 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
-## [4.0.0-pre.2] - 2021-04-06
+## [4.0.0-pre.3] - 2022-05-10
+
+### Fixed
+
+* Events will now consistently use local time + offset for timestamps
+* Fixes an issue that could occur when the SDK was disabled
+
+## [4.0.0-pre.2] - 2022-04-06
 
 ### New
 
@@ -15,7 +22,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 * IDFA usage has also been removed from the SDK - this identifier will no longer be added to events automatically when available.
 * This release restores the previous `Events` API for backwards compatability with `3.0.0` versions of the SDK. This API will be removed in a future release.
 
-## [4.0.0-pre.1] - 2021-03-14
+## [4.0.0-pre.1] - 2022-03-14
 
 ### Breaking Changes
 
@@ -38,12 +45,12 @@ In addition, some classes that were previously nested in other types have been m
 
 * Fixed a bug that would block the main thread when trying to send large amounts of events
 
-## [3.0.0-pre.4] - 2021-02-15
+## [3.0.0-pre.4] - 2022-02-15
 
 * Fixed a bug where event data was not cached locally when the game closes
 * Fixed a bug where floats were not serialized properly in cultures where the `,` character is used for decimals rather than `.`
 
-## [3.0.0-pre.3] - 2021-01-27
+## [3.0.0-pre.3] - 2022-01-27
 
 * Adds support for using a custom analytics ID via the Core SDK.
 

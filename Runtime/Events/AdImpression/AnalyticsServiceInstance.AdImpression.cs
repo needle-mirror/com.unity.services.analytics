@@ -21,7 +21,7 @@ namespace Unity.Services.Analytics
             _ = adImpressionParameters.AdCompletionStatus.ToString().ToUpperInvariant();
             _ = adImpressionParameters.AdProvider.ToString().ToUpperInvariant();
 
-            dataGenerator.AdImpression(ref dataBuffer, DateTime.UtcNow, m_CommonParams, "com.unity.services.analytics.events.adimpression", adImpressionParameters);
+            dataGenerator.AdImpression(ref dataBuffer, DateTime.Now, m_CommonParams, "com.unity.services.analytics.events.adimpression", adImpressionParameters);
         }
     }
 }

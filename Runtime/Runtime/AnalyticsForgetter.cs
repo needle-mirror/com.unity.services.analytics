@@ -72,7 +72,11 @@ namespace Unity.Services.Analytics.Internal
         {
             var code = m_Request.webRequest.responseCode;
 
+#if UNITY_2020_1_OR_NEWER
+            if (m_Request.webRequest.result == UnityWebRequest.Result.Success && code == 204)
+#else
             if (!m_Request.webRequest.isNetworkError && code == 204)
+#endif
             {
                 m_SuccessfullyUploaded = true;
                 s_Callback();

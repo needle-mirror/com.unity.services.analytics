@@ -146,12 +146,14 @@ namespace Unity.Services.Analytics
                     OptOut();
                 }
             }
+#if UNITY_ANALYTICS_EVENT_LOGS
             catch (ConsentCheckException e)
             {
-#if UNITY_ANALYTICS_EVENT_LOGS
                 Debug.Log("Initial GeoIP lookup fail: " + e.Message);
-#endif
             }
+#else
+            catch (ConsentCheckException) {}
+#endif
         }
 
         /// <summary>
@@ -166,8 +168,8 @@ namespace Unity.Services.Analytics
             }
 
             // Startup Events.
-            dataGenerator.SdkStartup(ref dataBuffer, DateTime.UtcNow, m_CommonParams, m_StartUpCallingId);
-            dataGenerator.ClientDevice(ref dataBuffer, DateTime.UtcNow, m_CommonParams, m_StartUpCallingId, SystemInfo.processorType, SystemInfo.graphicsDeviceName, SystemInfo.processorCount, SystemInfo.systemMemorySize, Screen.width, Screen.height, (int)Screen.dpi);
+            dataGenerator.SdkStartup(ref dataBuffer, DateTime.Now, m_CommonParams, m_StartUpCallingId);
+            dataGenerator.ClientDevice(ref dataBuffer, DateTime.Now, m_CommonParams, m_StartUpCallingId, SystemInfo.processorType, SystemInfo.graphicsDeviceName, SystemInfo.processorCount, SystemInfo.systemMemorySize, Screen.width, Screen.height, (int)Screen.dpi);
 
 #if UNITY_DOTSRUNTIME
             var isTiny = true;
@@ -175,7 +177,7 @@ namespace Unity.Services.Analytics
             var isTiny = false;
 #endif
 
-            dataGenerator.GameStarted(ref dataBuffer, DateTime.UtcNow, m_CommonParams, m_StartUpCallingId, Application.buildGUID, SystemInfo.operatingSystem, isTiny, DebugDevice.IsDebugDevice(), Locale.AnalyticsRegionLanguageCode());
+            dataGenerator.GameStarted(ref dataBuffer, DateTime.Now, m_CommonParams, m_StartUpCallingId, Application.buildGUID, SystemInfo.operatingSystem, isTiny, DebugDevice.IsDebugDevice(), Locale.AnalyticsRegionLanguageCode());
         }
 
         internal void NewPlayerEvent()
@@ -187,7 +189,7 @@ namespace Unity.Services.Analytics
 
             if (InstallId != null && new InternalNewPlayerHelper(InstallId).IsNewPlayer())
             {
-                dataGenerator.NewPlayer(ref dataBuffer, DateTime.UtcNow, m_CommonParams, m_StartUpCallingId, SystemInfo.deviceModel);
+                dataGenerator.NewPlayer(ref dataBuffer, DateTime.Now, m_CommonParams, m_StartUpCallingId, SystemInfo.deviceModel);
             }
         }
 
@@ -201,7 +203,7 @@ namespace Unity.Services.Analytics
                 return;
             }
 
-            dataGenerator.GameEnded(ref dataBuffer, DateTime.UtcNow, m_CommonParams, "com.unity.services.analytics.Events.Shutdown", DataGenerator.SessionEndState.QUIT);
+            dataGenerator.GameEnded(ref dataBuffer, DateTime.Now, m_CommonParams, "com.unity.services.analytics.Events.Shutdown", DataGenerator.SessionEndState.QUIT);
             if (ConsentTracker.IsGeoIpChecked())
             {
                 Flush();
@@ -219,7 +221,7 @@ namespace Unity.Services.Analytics
             }
 
             SetVariableCommonParams();
-            dataGenerator.GameRunning(ref dataBuffer, DateTime.UtcNow, m_CommonParams, "com.unity.services.analytics.Events.InternalTick");
+            dataGenerator.GameRunning(ref dataBuffer, DateTime.Now, m_CommonParams, "com.unity.services.analytics.Events.InternalTick");
             if (ConsentTracker.IsGeoIpChecked())
             {
                 Flush();
@@ -241,7 +243,7 @@ namespace Unity.Services.Analytics
                 return;
             }
 
-            dataGenerator.GameEnded(ref dataBuffer, DateTime.UtcNow, m_CommonParams, "com.unity.services.analytics.Events.GameEnded", quitState);
+            dataGenerator.GameEnded(ref dataBuffer, DateTime.Now, m_CommonParams, "com.unity.services.analytics.Events.GameEnded", quitState);
         }
 
         public async Task SetAnalyticsEnabled(bool enabled)

@@ -14,11 +14,6 @@ namespace Unity.Services.Analytics
 
         public async Task<List<string>> CheckForRequiredConsents()
         {
-            if (!ServiceEnabled)
-            {
-                return new List<string>();
-            }
-
             var response = await ConsentTracker.CheckGeoIP();
 
             if (response.identifier == Consent.None)
@@ -41,11 +36,6 @@ namespace Unity.Services.Analytics
 
         public void ProvideOptInConsent(string identifier, bool consent)
         {
-            if (!ServiceEnabled)
-            {
-                return;
-            }
-
             if (!ConsentTracker.IsGeoIpChecked())
             {
                 throw new ConsentCheckException(ConsentCheckExceptionReason.ConsentFlowNotKnown,
@@ -71,11 +61,6 @@ namespace Unity.Services.Analytics
 
         public void OptOut()
         {
-            if (!ServiceEnabled)
-            {
-                return;
-            }
-
             Debug.Log(ConsentTracker.IsConsentDenied()
                 ? "This user has opted out. Any cached events have been discarded and no more will be collected."
                 : "This user has opted out and is in the process of being forgotten...");
@@ -119,7 +104,7 @@ namespace Unity.Services.Analytics
 
             analyticsForgetter = new AnalyticsForgetter(m_CollectURL,
                 InstallId.GetOrCreateIdentifier(),
-                Internal.Buffer.SaveDateTime(DateTime.UtcNow),
+                Internal.Buffer.SaveDateTime(DateTime.Now),
                 k_ForgetCallingId,
                 ForgetMeEventUploaded, ConsentTracker);
             analyticsForgetter.AttemptToForget();
