@@ -16,10 +16,15 @@ namespace Unity.Services.Analytics
                 return;
             }
 
-            Debug.Assert(!string.IsNullOrEmpty(adImpressionParameters.PlacementID), "Required to have a value for placement ID.");
-            Debug.Assert(!string.IsNullOrEmpty(adImpressionParameters.PlacementName), "Required to have a value for placement name.");
-            _ = adImpressionParameters.AdCompletionStatus.ToString().ToUpperInvariant();
-            _ = adImpressionParameters.AdProvider.ToString().ToUpperInvariant();
+            if (string.IsNullOrEmpty(adImpressionParameters.PlacementID))
+            {
+                Debug.LogError("Required to have a value for placementID.");
+            }
+
+            if (string.IsNullOrEmpty(adImpressionParameters.PlacementName))
+            {
+                Debug.LogError("Required to have a value for placementName.");
+            }
 
             dataGenerator.AdImpression(ref dataBuffer, DateTime.Now, m_CommonParams, "com.unity.services.analytics.events.adimpression", adImpressionParameters);
         }

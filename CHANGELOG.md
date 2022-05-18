@@ -4,6 +4,12 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [4.0.1] - 2022-05-18
+
+### Fixed
+
+* Change assertions to error logs for missing required parameters
+
 ## [4.0.0] - 2022-05-12
 
 The UGS Analytics is no longer pre-release! No other changes in this version.

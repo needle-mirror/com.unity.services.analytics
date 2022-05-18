@@ -14,8 +14,15 @@ namespace Unity.Services.Analytics
                 return;
             }
 
-            Debug.Assert(!string.IsNullOrEmpty(transactionParameters.TransactionName), "Required to have a value for transactionName");
-            Debug.Assert(!transactionParameters.TransactionType.Equals(TransactionType.INVALID), "Required to have a value for transactionType");
+            if (string.IsNullOrEmpty(transactionParameters.TransactionName))
+            {
+                Debug.LogError("Required to have a value for transactionName");
+            }
+
+            if (transactionParameters.TransactionType.Equals(TransactionType.INVALID))
+            {
+                Debug.LogError("Required to have a value for transactionType");
+            }
 
             // If The paymentCountry is not provided we will generate it.
 

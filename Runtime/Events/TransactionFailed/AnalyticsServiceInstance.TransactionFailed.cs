@@ -12,9 +12,20 @@ namespace Unity.Services.Analytics
                 return;
             }
 
-            Debug.Assert(!string.IsNullOrEmpty(parameters.TransactionName), "Required to have a value for transactionName");
-            Debug.Assert(!parameters.TransactionType.Equals(TransactionType.INVALID), "Required to have a value for transactionType");
-            Debug.Assert(!string.IsNullOrEmpty(parameters.FailureReason), "Required to have a failure reason in transactionFailed event");
+            if (string.IsNullOrEmpty(parameters.TransactionName))
+            {
+                Debug.LogError("Required to have a value for transactionName");
+            }
+
+            if (parameters.TransactionType.Equals(TransactionType.INVALID))
+            {
+                Debug.LogError("Required to have a value for transactionType");
+            }
+
+            if (string.IsNullOrEmpty(parameters.FailureReason))
+            {
+                Debug.LogError("Required to have a failure reason in transactionFailed event");
+            }
 
             if (string.IsNullOrEmpty(parameters.PaymentCountry))
             {

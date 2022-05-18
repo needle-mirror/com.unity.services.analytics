@@ -16,16 +16,26 @@ namespace Unity.Services.Analytics
                 return;
             }
 
-            Debug.Assert(!string.IsNullOrEmpty(acquisitionSourceParameters.Channel),
-                "Required to have a value for channel");
-            Debug.Assert(!string.IsNullOrEmpty(acquisitionSourceParameters.CampaignId),
-                "Required to have a value for campaignId");
-            Debug.Assert(!string.IsNullOrEmpty(acquisitionSourceParameters.CreativeId),
-                "Required to have a value for creativeId");
-            Debug.Assert(!string.IsNullOrEmpty(acquisitionSourceParameters.CampaignName),
-                "Required to have a value for campaignName");
-            Debug.Assert(!string.IsNullOrEmpty(acquisitionSourceParameters.Provider),
-                "Required to have a value for provider");
+            if (string.IsNullOrEmpty(acquisitionSourceParameters.Channel))
+            {
+                Debug.LogError("Required to have a value for channel");
+            }
+            if (string.IsNullOrEmpty(acquisitionSourceParameters.CampaignId))
+            {
+                Debug.LogError("Required to have a value for campaignId");
+            }
+            if (string.IsNullOrEmpty(acquisitionSourceParameters.CreativeId))
+            {
+                Debug.LogError("Required to have a value for creativeId");
+            }
+            if (string.IsNullOrEmpty(acquisitionSourceParameters.CampaignName))
+            {
+                Debug.LogError("Required to have a value for campaignName");
+            }
+            if (string.IsNullOrEmpty(acquisitionSourceParameters.Provider))
+            {
+                Debug.LogError("Required to have a value for provider");
+            }
 
             dataGenerator.AcquisitionSource(ref dataBuffer, DateTime.Now, m_CommonParams,
                 "com.unity.services.analytics.events.acquisitionSource", acquisitionSourceParameters);
