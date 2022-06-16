@@ -1,7 +1,7 @@
 {
   "name": "com.unity.services.analytics",
   "displayName": "Analytics",
-  "version": "4.0.1",
+  "version": "4.1.0",
   "unity": "2019.4",
   "description": "The Unity Analytics package automatically collects core events and user properties when someone uses your game or application, and enables you to track specific in-game actions your user performs by defining custom events. The data collected from this package is surfaced in the Unity dashboard where you can use it to gather user insights, segment your player base and make informed decisions around the optimization of your game.",
   "dependencies": {
@@ -16,17 +16,17 @@
     }
   ],
   "_upm": {
-    "changelog": "### Fixed\n\n* Change assertions to error logs for missing required parameters"
+    "changelog": "### New\n\n* Added a method to access the user ID used by Analytics at runtime\n\n### Fixed\n\n* Events are now recorded with timestamps including milliseconds\n* XML documentation is available for more model objects\n* A better error message will be displayed when the project ID is missing"
   },
   "relatedPackages": {
-    "com.unity.services.analytics.tests": "4.0.1"
+    "com.unity.services.analytics.tests": "4.1.0"
   },
   "upmCi": {
-    "footprint": "4ce83ce917b6a24b6afb9ecc651ec29ede7223fc"
+    "footprint": "73e084d4ff407a630372e725d5e6a66072c512d0"
   },
   "repository": {
     "url": "https://github.cds.internal.unity3d.com/unity/operate-services-sdk.git",
     "type": "git",
-    "revision": "dac564bca5dae194afa944a6b22849513d412ec2"
+    "revision": "ce8dc514c456314c27bb9b989b588f1966853df6"
   }
 }

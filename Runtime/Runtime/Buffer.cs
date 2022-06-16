@@ -75,6 +75,10 @@ namespace Unity.Services.Analytics.Internal
             StandardEventIds,
         }
 
+        const string k_SecondDateFormat = "yyyy-MM-dd HH:mm:ss zzz";
+        const string k_MillisecondDateFormat = "yyyy-MM-dd HH:mm:ss.fff zzz";
+        static readonly string[] k_AllDateFormats = { k_SecondDateFormat, k_MillisecondDateFormat };
+
         // The event information is broken into name, type, and data. The name
         // usually ends up being the key in the JSON and the type and data are
         // for serialization.
@@ -330,12 +334,14 @@ namespace Unity.Services.Analytics.Internal
 
         public static string SaveDateTime(DateTime dateTime)
         {
-            return dateTime.ToString("yyyy-MM-dd HH:mm:ss zzz", CultureInfo.InvariantCulture);
+            return dateTime.ToString(k_MillisecondDateFormat, CultureInfo.InvariantCulture);
         }
 
         static DateTime ParseDateTime(string dateTime)
         {
-            return DateTime.ParseExact(dateTime, "yyyy-MM-dd HH:mm:ss zzz", CultureInfo.InvariantCulture);
+            // Need to check both second and millisecond formats here as we may have some previous customers using caches with the old second
+            // based format.
+            return DateTime.ParseExact(dateTime, k_AllDateFormats, CultureInfo.InvariantCulture, DateTimeStyles.None);
         }
 
         bool IsRequestOverSizeLimit(string data)
@@ -725,8 +731,10 @@ namespace Unity.Services.Analytics.Internal
                 Application.platform != RuntimePlatform.XboxOne &&
 #endif
                 Application.platform != RuntimePlatform.GameCoreXboxOne &&
-                Application.platform != RuntimePlatform.GameCoreXboxSeries
-                && !string.IsNullOrEmpty(Application.persistentDataPath);
+                Application.platform != RuntimePlatform.GameCoreXboxSeries &&
+                Application.platform != RuntimePlatform.PS4 &&
+                Application.platform != RuntimePlatform.PS5 &&
+                !string.IsNullOrEmpty(Application.persistentDataPath);
         }
     }
 

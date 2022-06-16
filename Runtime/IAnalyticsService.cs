@@ -97,6 +97,7 @@ namespace Unity.Services.Analytics
         /// Allows you to disable the Analytics service. When the service gets disabled all currently cached data both in RAM and on disk
         /// will be deleted and any new events will be voided. By default the service is enabled so you do not need to call this method on start.
         /// Will return instantly when disabling, must be awaited when re-enabling.
+        /// </summary>
         /// <example>
         /// To disable the Analytics Service before the game starts
         /// <code>
@@ -107,7 +108,6 @@ namespace Unity.Services.Analytics
         /// }
         /// </code>
         /// </example>
-        /// </summary>
         Task SetAnalyticsEnabled(bool enabled);
 
         /// <summary>
@@ -120,5 +120,11 @@ namespace Unity.Services.Analytics
         /// <param name="value">The major unit value of currency, for example 1.99 for 1 dollar 99 cents.</param>
         /// <returns>The minor unit value of the input currency, for example for an input of 1.99 USD 199 would be returned.</returns>
         long ConvertCurrencyToMinorUnits(string currencyCode, double value);
+
+        /// <summary>
+        /// Gets the user ID that Analytics is currently recording into the userId field of events.
+        /// </summary>
+        /// <returns>The user ID as a string</returns>
+        string GetAnalyticsUserID();
     }
 }

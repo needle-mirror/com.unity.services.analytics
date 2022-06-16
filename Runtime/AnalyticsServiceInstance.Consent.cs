@@ -9,7 +9,6 @@ namespace Unity.Services.Analytics
 {
     partial class AnalyticsServiceInstance
     {
-        internal IConsentTracker ConsentTracker = new ConsentTracker();
         internal IAnalyticsForgetter analyticsForgetter;
 
         public async Task<List<string>> CheckForRequiredConsents()
@@ -36,6 +35,8 @@ namespace Unity.Services.Analytics
 
         public void ProvideOptInConsent(string identifier, bool consent)
         {
+            m_CoreStatsHelper.SetCoreStatsConsent(consent);
+
             if (!ConsentTracker.IsGeoIpChecked())
             {
                 throw new ConsentCheckException(ConsentCheckExceptionReason.ConsentFlowNotKnown,
@@ -83,6 +84,7 @@ namespace Unity.Services.Analytics
 
             Revoke();
             ConsentTracker.SetDenyConsentToAll();
+            m_CoreStatsHelper.SetCoreStatsConsent(false);
         }
 
         void Revoke()

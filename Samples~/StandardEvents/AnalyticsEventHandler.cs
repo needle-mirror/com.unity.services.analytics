@@ -29,12 +29,14 @@ namespace Unity.Services.Analytics
         {
             Application.logMessageReceived -= OnLogMessageReceived;
         }
-        
+
         // Analytics Sample
         async void Start()
         {
             await UnityServices.InitializeAsync();
             await AnalyticsService.Instance.CheckForRequiredConsents();
+
+            Debug.Log($"Started UGS Analytics Sample with user ID: {AnalyticsService.Instance.GetAnalyticsUserID()}");
         }
 
         public void RecordMinimalAdImpressionEvent()

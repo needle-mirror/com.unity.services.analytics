@@ -37,15 +37,21 @@ namespace Unity.Services.Analytics
 
         internal bool ServiceEnabled { get; private set; } = true;
 
+        internal ICoreStatsHelper m_CoreStatsHelper = new CoreStatsHelper();
+        internal IConsentTracker ConsentTracker;
+
         internal AnalyticsServiceInstance()
         {
+            ConsentTracker = new ConsentTracker(m_CoreStatsHelper);
+
             // The docs say nothing about Application.cloudProjectId being guaranteed or not,
             // we add a check just to be sure.
             if (string.IsNullOrEmpty(Application.cloudProjectId))
             {
-                Debug.LogError("No Cloud ProjectID Found for Analytics");
+                Debug.LogError("No cloud project ID was found by the Analytics SDK. This means Analytics events will not be sent. Please make sure to link your cloud project in the Unity editor to fix this problem.");
                 return;
             }
+
 
             dataDispatcher = new Dispatcher(dataBuffer, new WebRequestHelper(), ConsentTracker);
 
@@ -85,7 +91,7 @@ namespace Unity.Services.Analytics
                 dataBuffer.InstallID = InstallId.GetOrCreateIdentifier();
                 dataBuffer.PlayerID = PlayerId?.PlayerId;
 
-                dataBuffer.UserID = !string.IsNullOrEmpty(CustomAnalyticsId) ? CustomAnalyticsId : dataBuffer.InstallID;
+                dataBuffer.UserID = GetAnalyticsUserID();
 
                 dataBuffer.SessionID = m_SessionID;
                 dataDispatcher.CollectUrl = m_CollectURL;
@@ -204,7 +210,9 @@ namespace Unity.Services.Analytics
             }
 
             dataGenerator.GameEnded(ref dataBuffer, DateTime.Now, m_CommonParams, "com.unity.services.analytics.Events.Shutdown", DataGenerator.SessionEndState.QUIT);
-            if (ConsentTracker.IsGeoIpChecked())
+
+            // Need to null check the consent tracker here in case the game ends before the tracker can be initialised.
+            if (ConsentTracker != null && ConsentTracker.IsGeoIpChecked())
             {
                 Flush();
             }

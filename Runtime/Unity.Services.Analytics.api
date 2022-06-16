@@ -232,6 +232,7 @@ namespace Unity.Services.Analytics
         public abstract long ConvertCurrencyToMinorUnits(string currencyCode, double value);
         public abstract void CustomData(string eventName, System.Collections.Generic.IDictionary<string, object> eventParams);
         public abstract void Flush();
+        public abstract string GetAnalyticsUserID();
         public abstract void OptOut();
         public abstract void ProvideOptInConsent(string identifier, bool consent);
         public abstract void RecordInternalEvent(Unity.Services.Analytics.Internal.Event eventToRecord);

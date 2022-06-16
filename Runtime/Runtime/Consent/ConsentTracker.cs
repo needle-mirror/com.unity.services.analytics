@@ -34,6 +34,8 @@ namespace Unity.Services.Analytics.Internal
     class ConsentTracker : IConsentTracker
     {
         readonly IGeoAPI m_GeoAPI;
+        readonly ICoreStatsHelper m_CoreStatsHelper;
+
         internal ConsentStatus optInPiplConsentStatus { get; set; }
         internal ConsentStatus optOutConsentStatus { get; set; }
 
@@ -59,22 +61,18 @@ namespace Unity.Services.Analytics.Internal
         internal const string optInPiplConsentStatusPrefKey = "unity.services.analytics.pipl_consent_status";
         internal const string optOutConsentStatusPrefKey = "unity.services.analytics.consent_status";
 
-        public ConsentTracker()
-        {
-            m_GeoAPI = new GeoAPI();
-            optOutConsentStatus = ConsentStatus.Unknown;
-            optInPiplConsentStatus = ConsentStatus.Unknown;
-            ReadOptInPiplConsentStatus();
-            ReadOptOutConsentStatus();
-        }
+        public ConsentTracker(ICoreStatsHelper coreStatsHelper)
+            : this(new GeoAPI(), coreStatsHelper) {}
 
-        internal ConsentTracker(IGeoAPI geoApi)
+        internal ConsentTracker(IGeoAPI geoApi, ICoreStatsHelper coreStatsHelper)
         {
             m_GeoAPI = geoApi ?? new GeoAPI();
+            m_CoreStatsHelper = coreStatsHelper;
             optOutConsentStatus = ConsentStatus.Unknown;
             optInPiplConsentStatus = ConsentStatus.Unknown;
             ReadOptInPiplConsentStatus();
             ReadOptOutConsentStatus();
+            m_CoreStatsHelper.SetCoreStatsConsent(false);
         }
 
         /// <summary>
@@ -111,6 +109,9 @@ namespace Unity.Services.Analytics.Internal
                     PlayerPrefs.SetInt(optInPiplConsentStatusPrefKey, (int)optInPiplConsentStatus);
                     PlayerPrefs.Save();
                 }
+
+                // Now we know which legislation we are in, we can init the core stats consent status appropriately
+                m_CoreStatsHelper.SetCoreStatsConsent(IsConsentGiven());
 
                 return newResponse;
             }
