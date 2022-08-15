@@ -27,17 +27,11 @@ namespace Unity.Services.Analytics.Internal
                 downloadHandler = new DownloadHandlerBuffer()
             };
 
-            var async = request.SendWebRequest();
-
-            while (!async.isDone)
-            {
-                await Task.Delay(1);
-            }
-
+            var async = await new WebRequestTaskWrapper(request);
 
 #if UNITY_2020_1_OR_NEWER
             if (async.webRequest.result == UnityWebRequest.Result.ProtocolError ||
-            async.webRequest.result == UnityWebRequest.Result.ConnectionError)
+                async.webRequest.result == UnityWebRequest.Result.ConnectionError)
 #else
             if (async.webRequest.isHttpError || async.webRequest.isNetworkError)
 #endif
@@ -65,6 +59,28 @@ namespace Unity.Services.Analytics.Internal
                 throw new ConsentCheckException(ConsentCheckExceptionReason.DeserializationIssue, CommonErrorCodes.Unknown,
                     "The error occurred while deserializing the privacy GeoIP reseponse. Please try again later.",
                     null);
+            }
+        }
+
+        private class WebRequestTaskWrapper
+        {
+            readonly UnityWebRequestAsyncOperation m_AsyncOp;
+
+            public WebRequestTaskWrapper(UnityWebRequest request)
+            {
+                m_AsyncOp = request.SendWebRequest();
+            }
+
+            public TaskAwaiter<UnityWebRequestAsyncOperation> GetAwaiter()
+            {
+                var tcs = new TaskCompletionSource<UnityWebRequestAsyncOperation>();
+
+                m_AsyncOp.completed += obj =>
+                {
+                    var result = m_AsyncOp;
+                    tcs.SetResult(result);
+                };
+                return tcs.Task.GetAwaiter();
             }
         }
     }

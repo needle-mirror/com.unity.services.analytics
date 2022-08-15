@@ -126,5 +126,11 @@ namespace Unity.Services.Analytics
         /// </summary>
         /// <returns>The user ID as a string</returns>
         string GetAnalyticsUserID();
+
+        /// <summary>
+        /// Gets the session ID that is currently recording into the sessionID field of events.
+        /// </summary>
+        /// <returns>The session ID as a string</returns>
+        string SessionID { get; }
     }
 }

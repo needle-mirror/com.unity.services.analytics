@@ -15,6 +15,7 @@ class Ua2CoreInitializeCallback : IInitializablePackage
     {
         CoreRegistry.Instance.RegisterPackage(new Ua2CoreInitializeCallback())
             .DependsOn<IInstallationId>()
+            .DependsOn<ICloudProjectId>()
             .DependsOn<IEnvironments>()
             .DependsOn<IProjectConfiguration>()
             .OptionallyDependsOn<IPlayerId>();
@@ -22,6 +23,7 @@ class Ua2CoreInitializeCallback : IInitializablePackage
 
     public async Task Initialize(CoreRegistry registry)
     {
+        var cloudProjectId = registry.GetServiceComponent<ICloudProjectId>();
         var installationId = registry.GetServiceComponent<IInstallationId>();
         var playerId = registry.GetServiceComponent<IPlayerId>();
         var environments = registry.GetServiceComponent<IEnvironments>();
@@ -29,7 +31,7 @@ class Ua2CoreInitializeCallback : IInitializablePackage
 
         var analyticsUserId = projectConfiguration.GetString("com.unity.services.core.analytics-user-id");
 
-        await AnalyticsService.internalInstance.Initialize(installationId, playerId, environments.Current, analyticsUserId);
+        await AnalyticsService.internalInstance.Initialize(cloudProjectId, installationId, playerId, environments.Current, analyticsUserId);
 
 #if UNITY_ANALYTICS_DEVELOPMENT
         Debug.LogFormat("Core Initialize Callback\nInstall ID: {0}\nPlayer ID: {1}\nCustom Analytics ID: {2}",

@@ -15,6 +15,7 @@ namespace Unity.Services.Analytics.Internal
         string InstallID { get; set; }
         string PlayerID { get; set; }
         string SessionID { get; set; }
+        int Length { get; }
         string Serialize(List<Buffer.Token> tokens);
         void InsertTokens(List<Buffer.Token> tokens);
         void PushStartEvent(string name, DateTime datetime, Int64? eventVersion, bool addPlayerIdsToEventBody = false);
@@ -52,6 +53,8 @@ namespace Unity.Services.Analytics.Internal
         public string SessionID { get; set; }
         public string PlayerID { get; set; }
         public string InstallID { get; set; }
+
+        public int Length => m_Tokens.Count;
 
         // With the exception of EventStart, EventEnd, these tokens map to the
         // DDNA JSON Schema. The full schema at the time of writing is. OBJECT,
@@ -744,6 +747,8 @@ namespace Unity.Services.Analytics.Internal
         public string InstallID { get; set; }
         public string PlayerID { get; set; }
         public string SessionID { get; set; }
+
+        public int Length => 0;
 
         public void ClearBuffer()
         {

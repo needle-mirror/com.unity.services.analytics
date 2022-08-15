@@ -226,6 +226,7 @@ namespace Unity.Services.Analytics
     public interface IAnalyticsService
     {
         public abstract string PrivacyUrl { get; }
+        public abstract string SessionID { get; }
         public abstract void AcquisitionSource(Unity.Services.Analytics.AcquisitionSourceParameters acquisitionSourceParameters);
         public abstract void AdImpression(Unity.Services.Analytics.AdImpressionParameters parameters);
         public abstract System.Threading.Tasks.Task<System.Collections.Generic.List<string>> CheckForRequiredConsents();

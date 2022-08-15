@@ -4,6 +4,7 @@ using Unity.Services.Analytics.Data;
 using Unity.Services.Analytics.Internal;
 using Unity.Services.Analytics.Platform;
 using Unity.Services.Authentication.Internal;
+using Unity.Services.Core.Configuration.Internal;
 using Unity.Services.Core.Device.Internal;
 using UnityEngine;
 using Event = Unity.Services.Analytics.Internal.Event;
@@ -19,17 +20,19 @@ namespace Unity.Services.Analytics
 
         internal IPlayerId PlayerId { get; private set; }
         internal IInstallationId InstallId { get; private set; }
+        internal ICloudProjectId CloudProjectIdProvider { get; private set; }
+        internal string CloudProjectId => CloudProjectIdProvider?.GetCloudProjectId() ?? Application.cloudProjectId;
 
         internal string CustomAnalyticsId { get; private set; }
 
         internal IBuffer dataBuffer = new Internal.Buffer();
+        int m_BufferLengthAtLastGameRunning;
 
         internal IDataGenerator dataGenerator = new DataGenerator();
 
         internal IDispatcher dataDispatcher { get; set; }
 
         string m_CollectURL;
-        readonly string m_SessionID;
         readonly StdCommonParams m_CommonParams = new StdCommonParams();
         readonly string m_StartUpCallingId = "com.unity.services.analytics.Events.Startup";
 
@@ -40,22 +43,22 @@ namespace Unity.Services.Analytics
         internal ICoreStatsHelper m_CoreStatsHelper = new CoreStatsHelper();
         internal IConsentTracker ConsentTracker;
 
+        public string SessionID { get; }
+
         internal AnalyticsServiceInstance()
         {
             ConsentTracker = new ConsentTracker(m_CoreStatsHelper);
 
-            // The docs say nothing about Application.cloudProjectId being guaranteed or not,
-            // we add a check just to be sure.
+            // Add a check to ensure a project id is set.
             if (string.IsNullOrEmpty(Application.cloudProjectId))
             {
                 Debug.LogError("No cloud project ID was found by the Analytics SDK. This means Analytics events will not be sent. Please make sure to link your cloud project in the Unity editor to fix this problem.");
                 return;
             }
 
-
             dataDispatcher = new Dispatcher(dataBuffer, new WebRequestHelper(), ConsentTracker);
 
-            m_SessionID = Guid.NewGuid().ToString();
+            SessionID = Guid.NewGuid().ToString();
 
             m_CommonParams.ClientVersion = Application.version;
             m_CommonParams.ProjectID = Application.cloudProjectId;
@@ -72,7 +75,7 @@ namespace Unity.Services.Analytics
                 return;
             }
 
-            if (string.IsNullOrEmpty(Application.cloudProjectId))
+            if (string.IsNullOrEmpty(CloudProjectId))
             {
                 return;
             }
@@ -93,7 +96,7 @@ namespace Unity.Services.Analytics
 
                 dataBuffer.UserID = GetAnalyticsUserID();
 
-                dataBuffer.SessionID = m_SessionID;
+                dataBuffer.SessionID = SessionID;
                 dataDispatcher.CollectUrl = m_CollectURL;
                 dataDispatcher.Flush();
             }
@@ -114,18 +117,20 @@ namespace Unity.Services.Analytics
             dataBuffer.PushEvent(eventToRecord);
         }
 
-        internal void SetDependencies(IInstallationId installId, IPlayerId playerId, string environment, string customAnalyticsId)
+        internal void SetDependencies(ICloudProjectId cloudProjectId, IInstallationId installId, IPlayerId playerId, string environment, string customAnalyticsId)
         {
+            CloudProjectIdProvider = cloudProjectId;
             InstallId = installId;
             PlayerId = playerId;
             CustomAnalyticsId = customAnalyticsId;
 
-            m_CollectURL = string.Format(k_CollectUrlPattern, Application.cloudProjectId, environment.ToLowerInvariant());
+            m_CommonParams.ProjectID = CloudProjectId;
+            m_CollectURL = string.Format(k_CollectUrlPattern, CloudProjectId, environment.ToLowerInvariant());
         }
 
-        internal async Task Initialize(IInstallationId installId, IPlayerId playerId, string environment, string customAnalyticsId)
+        internal async Task Initialize(ICloudProjectId cloudProjectId, IInstallationId installId, IPlayerId playerId, string environment, string customAnalyticsId)
         {
-            SetDependencies(installId, playerId, environment, customAnalyticsId);
+            SetDependencies(cloudProjectId, installId, playerId, environment, customAnalyticsId);
 
             if (!ServiceEnabled)
             {
@@ -140,7 +145,7 @@ namespace Unity.Services.Analytics
             SetVariableCommonParams();
 
 #if UNITY_ANALYTICS_DEVELOPMENT
-            Debug.LogFormat("UA2 Setup\nCollectURL:{0}\nSessionID:{1}", m_CollectURL, m_SessionID);
+            Debug.LogFormat("UA2 Setup\nCollectURL:{0}\nSessionID:{1}", m_CollectURL, SessionID);
 #endif
 
             try
@@ -158,7 +163,9 @@ namespace Unity.Services.Analytics
                 Debug.Log("Initial GeoIP lookup fail: " + e.Message);
             }
 #else
-            catch (ConsentCheckException) {}
+            catch (ConsentCheckException)
+            {
+            }
 #endif
         }
 
@@ -218,19 +225,30 @@ namespace Unity.Services.Analytics
             }
         }
 
+        internal void RecordGameRunningIfNecessary()
+        {
+            if (ServiceEnabled)
+            {
+                if (dataBuffer.Length == 0 || dataBuffer.Length == m_BufferLengthAtLastGameRunning)
+                {
+                    SetVariableCommonParams();
+                    dataGenerator.GameRunning(ref dataBuffer, DateTime.Now, m_CommonParams, "com.unity.services.analytics.AnalyticsServiceInstance.RecordGameRunningIfNecessary");
+                    m_BufferLengthAtLastGameRunning = dataBuffer.Length;
+                }
+                else
+                {
+                    m_BufferLengthAtLastGameRunning = dataBuffer.Length;
+                }
+            }
+        }
+
         // <summary>
         // Internal tick is called by the Heartbeat at set intervals.
         // </summary>
         internal void InternalTick()
         {
-            if (!ServiceEnabled)
-            {
-                return;
-            }
-
-            SetVariableCommonParams();
-            dataGenerator.GameRunning(ref dataBuffer, DateTime.Now, m_CommonParams, "com.unity.services.analytics.Events.InternalTick");
-            if (ConsentTracker.IsGeoIpChecked())
+            if (ServiceEnabled &&
+                ConsentTracker.IsGeoIpChecked())
             {
                 Flush();
             }

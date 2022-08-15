@@ -68,7 +68,15 @@ namespace Unity.Services.Analytics.Internal
             // 'Bulk Events' -> https://docs.deltadna.com/advanced-integration/rest-api/
 
             var tokens = m_DataBuffer.CloneTokens();
+
+#if UNITY_WEBGL
+            // NOTE: we are maintaining the async/Task format, even though this is now synchronous,
+            // to minimise the fallout of this platform-specific path. If we made it fully synchronous all
+            // the way up, we would have to change several method signatures too, which could be Breaking.
+            var task = Task.FromResult(SerializeBuffer(tokens));
+#else
             var task = Task.Factory.StartNew(() => SerializeBuffer(tokens));
+#endif
             var postBytes = await task;
 
             if (postBytes == null || postBytes.Length == 0)
@@ -90,7 +98,7 @@ namespace Unity.Services.Analytics.Internal
             // Callback
             // If the result is successful we will remove the request.
             // else if there was a failure, we insert the tokens back into the buffer.
-            m_WebRequestHelper.SendWebRequest(request, delegate (long responseCode)
+            m_WebRequestHelper.SendWebRequest(request, delegate(long responseCode)
             {
 #if UNITY_ANALYTICS_DEVELOPMENT
                 Debug.LogFormat("AnalyticsRuntime: Web Callback - Request.Count = {0}", Requests.Count);

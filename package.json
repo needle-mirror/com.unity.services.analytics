@@ -1,7 +1,7 @@
 {
   "name": "com.unity.services.analytics",
   "displayName": "Analytics",
-  "version": "4.1.0",
+  "version": "4.2.0",
   "unity": "2019.4",
   "description": "The Unity Analytics package automatically collects core events and user properties when someone uses your game or application, and enables you to track specific in-game actions your user performs by defining custom events. The data collected from this package is surfaced in the Unity dashboard where you can use it to gather user insights, segment your player base and make informed decisions around the optimization of your game.",
   "dependencies": {
@@ -16,17 +16,32 @@
     }
   ],
   "_upm": {
-    "changelog": "### New\n\n* Added a method to access the user ID used by Analytics at runtime\n\n### Fixed\n\n* Events are now recorded with timestamps including milliseconds\n* XML documentation is available for more model objects\n* A better error message will be displayed when the project ID is missing"
+    "gameService": {
+      "genericDashboardUrl": "https://dashboard.unity3d.com/analytics",
+      "projectDashboardUrl": "https://dashboard.unity3d.com/organizations/{0}/projects/{1}/analytics/events",
+      "projectDashboardUrlType": "OrganizationKeyAndProjectGuid",
+      "configurePath": "Project/Services/Analytics"
+    },
+    "supportedPlatforms": [
+      "Android",
+      "iOS",
+      "Linux",
+      "Mac",
+      "PC",
+      "Windows 8.1 Universal",
+      "Windows 10 Universal",
+      "WebGL"
+    ]
   },
   "relatedPackages": {
-    "com.unity.services.analytics.tests": "4.1.0"
+    "com.unity.services.analytics.tests": "4.2.0"
   },
   "upmCi": {
-    "footprint": "73e084d4ff407a630372e725d5e6a66072c512d0"
+    "footprint": "a11bceb2f3e5bdc3bd524a694e1e19c92ff2f8ba"
   },
   "repository": {
     "url": "https://github.cds.internal.unity3d.com/unity/operate-services-sdk.git",
     "type": "git",
-    "revision": "ce8dc514c456314c27bb9b989b588f1966853df6"
+    "revision": "40445d94118e139ce5bff46afdeb574502a2e3c9"
   }
 }
