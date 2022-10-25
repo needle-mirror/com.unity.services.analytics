@@ -25,7 +25,7 @@ namespace Unity.Services.Analytics
 
         internal string CustomAnalyticsId { get; private set; }
 
-        internal IBuffer dataBuffer = new Internal.Buffer();
+        internal IBuffer dataBuffer = new Internal.Buffer(new BufferSystemCalls());
         int m_BufferLengthAtLastGameRunning;
 
         internal IDataGenerator dataGenerator = new DataGenerator();
@@ -132,12 +132,15 @@ namespace Unity.Services.Analytics
         {
             SetDependencies(cloudProjectId, installId, playerId, environment, customAnalyticsId);
 
-            if (!ServiceEnabled)
+            if (ServiceEnabled)
             {
-                return;
-            }
+                AnalyticsContainer.Initialize();
 
-            await InitializeUser();
+                await InitializeUser();
+
+                // Startup events require a user ID (either Installation or Custom).
+                RecordStartupEvents();
+            }
         }
 
         async Task InitializeUser()
@@ -169,17 +172,8 @@ namespace Unity.Services.Analytics
 #endif
         }
 
-        /// <summary>
-        /// Sets up the internals of the Analytics SDK, including the regular sending of events and assigning
-        /// the userID to be used in further event recording.
-        /// </summary>
-        internal void Startup()
+        void RecordStartupEvents()
         {
-            if (!ServiceEnabled)
-            {
-                return;
-            }
-
             // Startup Events.
             dataGenerator.SdkStartup(ref dataBuffer, DateTime.Now, m_CommonParams, m_StartUpCallingId);
             dataGenerator.ClientDevice(ref dataBuffer, DateTime.Now, m_CommonParams, m_StartUpCallingId, SystemInfo.processorType, SystemInfo.graphicsDeviceName, SystemInfo.processorCount, SystemInfo.systemMemorySize, Screen.width, Screen.height, (int)Screen.dpi);
@@ -191,14 +185,6 @@ namespace Unity.Services.Analytics
 #endif
 
             dataGenerator.GameStarted(ref dataBuffer, DateTime.Now, m_CommonParams, m_StartUpCallingId, Application.buildGUID, SystemInfo.operatingSystem, isTiny, DebugDevice.IsDebugDevice(), Locale.AnalyticsRegionLanguageCode());
-        }
-
-        internal void NewPlayerEvent()
-        {
-            if (!ServiceEnabled)
-            {
-                return;
-            }
 
             if (InstallId != null && new InternalNewPlayerHelper(InstallId).IsNewPlayer())
             {
@@ -276,7 +262,7 @@ namespace Unity.Services.Analytics
         {
             if (enabled && !ServiceEnabled)
             {
-                dataBuffer = new Internal.Buffer();
+                dataBuffer = new Internal.Buffer(new BufferSystemCalls());
                 dataDispatcher = new Dispatcher(dataBuffer, new WebRequestHelper(), ConsentTracker);
                 await InitializeUser();
 

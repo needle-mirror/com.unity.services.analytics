@@ -1,6 +1,4 @@
-using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Networking;
@@ -18,7 +16,9 @@ namespace Unity.Services.Analytics.Internal
         readonly IBuffer m_DataBuffer;
         readonly IWebRequestHelper m_WebRequestHelper;
 
-        internal readonly Dictionary<Guid, List<Buffer.Token>> Requests = new Dictionary<Guid, List<Buffer.Token>>();
+        internal bool FlushInProgress { get; private set; }
+        IWebRequest m_FlushRequest;
+        List<Buffer.Token> m_FlushPayload;
 
         public string CollectUrl { get; set; }
 
@@ -33,11 +33,9 @@ namespace Unity.Services.Analytics.Internal
 
         public async Task Flush()
         {
-            // Some sanity check that we aren't spinning out of control.
-            // This should be very unlikely.
-            if (Requests.Count > 128)
+            if (FlushInProgress)
             {
-                Debug.LogWarning("Analytics Dispatcher has reached limit of pending requests.");
+                Debug.LogWarning("Analytics Dispatcher is already flushing.");
                 return;
             }
 
@@ -48,18 +46,9 @@ namespace Unity.Services.Analytics.Internal
                 return;
             }
 
+            FlushInProgress = true;
+
             await FlushBufferToService();
-        }
-
-        byte[] SerializeBuffer(List<Buffer.Token> tokens)
-        {
-            var collectData = m_DataBuffer.Serialize(tokens);
-            if (string.IsNullOrEmpty(collectData))
-            {
-                return null;
-            }
-
-            return Encoding.UTF8.GetBytes(collectData);
         }
 
         async Task FlushBufferToService()
@@ -73,86 +62,90 @@ namespace Unity.Services.Analytics.Internal
             // NOTE: we are maintaining the async/Task format, even though this is now synchronous,
             // to minimise the fallout of this platform-specific path. If we made it fully synchronous all
             // the way up, we would have to change several method signatures too, which could be Breaking.
-            var task = Task.FromResult(SerializeBuffer(tokens));
+            var task = Task.FromResult(m_DataBuffer.Serialize(tokens));
 #else
-            var task = Task.Factory.StartNew(() => SerializeBuffer(tokens));
+            var task = Task.Factory.StartNew(() => m_DataBuffer.Serialize(tokens));
 #endif
             var postBytes = await task;
 
             if (postBytes == null || postBytes.Length == 0)
             {
+                FlushInProgress = false;
+                m_FlushPayload = null;
                 return;
             }
 
-            var request = m_WebRequestHelper.CreateWebRequest(CollectUrl, UnityWebRequest.kHttpVerbPOST, postBytes);
+            m_FlushRequest = m_WebRequestHelper.CreateWebRequest(CollectUrl, UnityWebRequest.kHttpVerbPOST, postBytes);
 
             if (ConsentTracker.IsGeoIpChecked() && ConsentTracker.IsConsentGiven())
             {
                 foreach (var header in ConsentTracker.requiredHeaders)
                 {
-                    request.SetRequestHeader(header.Key, header.Value);
+                    m_FlushRequest.SetRequestHeader(header.Key, header.Value);
                 }
             }
 
-            var requestId = Guid.NewGuid();
-            // Callback
-            // If the result is successful we will remove the request.
-            // else if there was a failure, we insert the tokens back into the buffer.
-            m_WebRequestHelper.SendWebRequest(request, delegate(long responseCode)
-            {
-#if UNITY_ANALYTICS_DEVELOPMENT
-                Debug.LogFormat("AnalyticsRuntime: Web Callback - Request.Count = {0}", Requests.Count);
-#endif
+            m_FlushPayload = tokens;
 
-                if (!request.isNetworkError && responseCode == 204)
-                {
-#if UNITY_ANALYTICS_DEVELOPMENT
-                    Debug.Assert(responseCode == 204, "AnalyticsRuntime: Incorrect response, check your JSON for errors.");
-#endif
-
-#if UNITY_ANALYTICS_EVENT_LOGS
-                    Debug.LogFormat("Events uploaded successfully!");
-#endif
-
-                    m_DataBuffer.ClearDiskCache();
-                }
-                else
-                {
-                    // Reinsert the tokens back into the buffer.
-                    m_DataBuffer.InsertTokens(Requests[requestId]);
-
-#if UNITY_ANALYTICS_EVENT_LOGS
-                    if (request.isNetworkError)
-                    {
-                        Debug.Log("Events failed to upload (network error) -- will retry at next heartbeat.");
-                    }
-                    else
-                    {
-                        Debug.LogFormat("Events failed to upload (code {0}) -- will retry at next heartbeat.", responseCode);
-                    }
-#endif
-
-                    m_DataBuffer.FlushToDisk();
-                }
-
-                // Clear the request now that we are done.
-                Requests.Remove(requestId);
-                request.Dispose();
-            });
-
-#if UNITY_ANALYTICS_DEVELOPMENT
-            Debug.Log("AnalyticsRuntime: Flush");
-#endif
-
-            Requests.Add(requestId, tokens);
-
-#if UNITY_ANALYTICS_DEVELOPMENT
-            Debug.LogFormat("AnalyticsRuntime: Request In Queue - Request.Count = {0}", Requests.Count);
-#endif
+            m_WebRequestHelper.SendWebRequest(m_FlushRequest, UploadCompleted);
 
 #if UNITY_ANALYTICS_EVENT_LOGS
             Debug.Log("Uploading events...");
 #endif
+        }
+
+        void UploadCompleted(long responseCode)
+        {
+            // Callback
+            // If the result is successful we will remove the request.
+            // else if there was a failure, we insert the tokens back into the buffer.
+
+            if (!m_FlushRequest.isNetworkError &&
+                (responseCode == 204 || responseCode == 400))
+            {
+                // If we get a 400 response code, the JSON is malformed which means we have a bad event somewhere
+                // in the queue. In this case, our only recourse is to discard the tokens. If they were
+                // to be reinserted into the queue, the bad event would recur forever and no more data would ever
+                // by uploaded.
+                // So, slightly counter-intuitively, our actions on getting a success 204 and an error 400 are actually the same.
+                // Other errors are likely transient and should not result in clearance of the buffer.
+
+                m_DataBuffer.ClearDiskCache();
+
+#if UNITY_ANALYTICS_EVENT_LOGS
+                if (responseCode == 204)
+                {
+                    Debug.Log("Events uploaded successfully!");
+                }
+                else
+                {
+                    Debug.Log("Events upload failed due to malformed JSON, likely from corrupt event. Event buffer has been cleared.");
+                }
+#endif
+            }
+            else
+            {
+                // Reinsert the tokens back into the buffer.
+                m_DataBuffer.InsertTokens(m_FlushPayload);
+                m_DataBuffer.FlushToDisk();
+
+#if UNITY_ANALYTICS_EVENT_LOGS
+                if (m_FlushRequest.isNetworkError)
+                {
+                    Debug.Log("Events failed to upload (network error) -- will retry at next heartbeat.");
+                }
+                else
+                {
+                    Debug.LogFormat("Events failed to upload (code {0}) -- will retry at next heartbeat.", responseCode);
+                }
+#endif
+            }
+
+            // Clear the request now that we are done.
+            FlushInProgress = false;
+            m_FlushPayload = null;
+            m_FlushRequest.Dispose();
+            m_FlushRequest = null;
         }
     }
 }

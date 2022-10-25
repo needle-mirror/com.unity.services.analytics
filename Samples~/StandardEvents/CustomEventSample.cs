@@ -7,7 +7,7 @@ namespace Unity.Services.Analytics
     {
         public static void RecordCustomEventWithNoParameters()
         {
-            AnalyticsService.Instance.CustomData("myEvent", new Dictionary<string, object>());
+            AnalyticsService.Instance.CustomData("myEvent");
         }
 
         public static void RecordCustomEventWithParameters()
@@ -19,8 +19,7 @@ namespace Unity.Services.Analytics
                 { "tremendousLong", Int64.MaxValue },
                 { "spectacularFloat", 0.451f },
                 { "incredibleDouble", 0.000000000000000031337 },
-                { "peculiarBool", true },
-                { "ultimateTimestamp", DateTime.UtcNow }
+                { "peculiarBool", true }
             };
 
             AnalyticsService.Instance.CustomData("myEvent", parameters);

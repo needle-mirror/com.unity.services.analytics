@@ -14,7 +14,9 @@ namespace Unity.Services.Analytics
         string PrivacyUrl { get; }
 
         /// <summary>
-        /// Forces an immediately upload of all recorded events to the server, if there is an internet connection.
+        /// Forces an immediately upload of all recorded events to the server, if there is an internet connection and a flush is not already in progress.
+        /// Flushing is triggered automatically on a regular cadence so you should not need to use this method, unless you specifically require some
+        /// queued events to be uploaded immediately.
         /// </summary>
         /// <exception cref="ConsentCheckException">Thrown if the required consent flow cannot be determined..</exception>
         void Flush();
@@ -37,6 +39,11 @@ namespace Unity.Services.Analytics
         /// Record a custom event. A schema for this event must exist on the dashboard or it will be ignored.
         /// </summary>
         void CustomData(string eventName, IDictionary<string, object> eventParams);
+
+        /// <summary>
+        /// Record a custom event that does not have any parameters. A schema for this event must exist on the dashboard or it will be ignored.
+        /// </summary>
+        void CustomData(string eventName);
 
         /// <summary>
         /// Returns identifiers of required consents we need to gather from the user

@@ -4,17 +4,35 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [4.3.0] - 2022-10-25
+
+### Added
+
+* Added CustomData(string eventName) method for recording events that do not have any parameters
+
+### Fixed
+
+* Issue where a single corrupt event could prevent all subsequent events from being sent
+* NullReferenceException when passing null instead of a Dictionary of parameters to CustomData for an event that does not have any parameters
+* NullReferenceException when passing null for the currency code to ConvertCurrencyToMinorUnits; it now throws an ArgumentNullException if the currency code is either null or empty
+* Compiler error on 2020.1 editor versions
+* Documentation comment on IAnalyticsService.Flush method to clarifybehaviour and usage
+
+### Changed
+
+* AnalyticsContainer object is no longer created automatically on start-up; it is now spawned during UnityServices.InitializeAsync
+
 ## [4.2.0] - 2022-08-15
 
-## Added
+### Added
 
 * SessionID property that returns the GUID value currently being used to populate the "sessionID" parameter of all events
 
-## Changed
+### Changed
 
 * Reduced frequency of gameRunning event to reduce excess traffic (this will not affect the quality of your data)
 
-## Fixed
+### Fixed
 
 * SDK initialisation failing silently on WebGL due to problem with privacy consent flow
 * SDK event batching for upload failing silently on WebGL

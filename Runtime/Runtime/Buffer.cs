@@ -16,13 +16,13 @@ namespace Unity.Services.Analytics.Internal
         string PlayerID { get; set; }
         string SessionID { get; set; }
         int Length { get; }
-        string Serialize(List<Buffer.Token> tokens);
+        byte[] Serialize(List<Buffer.Token> tokens);
         void InsertTokens(List<Buffer.Token> tokens);
         void PushStartEvent(string name, DateTime datetime, Int64? eventVersion, bool addPlayerIdsToEventBody = false);
         void PushEndEvent();
         void PushObjectStart(string name = null);
         void PushObjectEnd();
-        void PushArrayStart(string name = null);
+        void PushArrayStart(string name);
         void PushArrayEnd();
         void PushDouble(double val, string name = null);
         void PushFloat(float val, string name = null);
@@ -98,6 +98,7 @@ namespace Unity.Services.Analytics.Internal
         }
 
         readonly List<Token> m_Tokens = new List<Token>();
+        readonly IBufferSystemCalls m_EventIdGenerator;
         readonly string m_CacheFilePath = CanUseDiskPersistence() ? $"{Application.persistentDataPath}/eventcache" : "";
         readonly long m_CacheFileMaximumSize = 1024 * 1024 * 5; // 5MB
 
@@ -106,8 +107,9 @@ namespace Unity.Services.Analytics.Internal
         int m_DiskCacheLastFlushedToken;
         long m_DiskCacheSize;
 
-        public Buffer()
+        public Buffer(IBufferSystemCalls eventIdGenerator)
         {
+            m_EventIdGenerator = eventIdGenerator;
             LoadFromDisk();
             ClearDiskCache();
         }
@@ -133,7 +135,7 @@ namespace Unity.Services.Analytics.Internal
         /// internal data.
         /// </summary>
         /// <returns>String of JSON or Null</returns>
-        public string Serialize(List<Token> tokens)
+        public byte[] Serialize(List<Token> tokens)
         {
 #if UNITY_ANALYTICS_DEVELOPMENT
             Debug.Assert(!string.IsNullOrEmpty(UserID));
@@ -168,7 +170,7 @@ namespace Unity.Services.Analytics.Internal
                         data.Append(SessionID);
                         data.Append("\",");
                         data.Append("\"eventUUID\":\"");
-                        data.Append(Guid.NewGuid().ToString());
+                        data.Append(m_EventIdGenerator.GenerateGuid());
                         data.Append("\",");
 
 #if UNITY_ANALYTICS_EVENT_LOGS
@@ -332,7 +334,15 @@ namespace Unity.Services.Analytics.Internal
 
             data.Append("]}");
 
-            return data.ToString();
+            var dataString = data.ToString();
+            if (string.IsNullOrEmpty(dataString))
+            {
+                return null;
+            }
+            else
+            {
+                return Encoding.UTF8.GetBytes(dataString);
+            }
         }
 
         public static string SaveDateTime(DateTime dateTime)
@@ -733,10 +743,12 @@ namespace Unity.Services.Analytics.Internal
 #if !UNITY_2021_1_OR_NEWER
                 Application.platform != RuntimePlatform.XboxOne &&
 #endif
+#if UNITY_2019 || UNITY_2020_2_OR_NEWER
                 Application.platform != RuntimePlatform.GameCoreXboxOne &&
                 Application.platform != RuntimePlatform.GameCoreXboxSeries &&
-                Application.platform != RuntimePlatform.PS4 &&
                 Application.platform != RuntimePlatform.PS5 &&
+#endif
+                Application.platform != RuntimePlatform.PS4 &&
                 !string.IsNullOrEmpty(Application.persistentDataPath);
         }
     }
@@ -831,9 +843,9 @@ namespace Unity.Services.Analytics.Internal
         {
         }
 
-        public string Serialize(List<Buffer.Token> tokens)
+        public byte[] Serialize(List<Buffer.Token> tokens)
         {
-            return String.Empty;
+            return null;
         }
     }
 }

@@ -3,8 +3,7 @@ using UnityEngine;
 
 namespace Unity.Services.Analytics
 {
-    [Obsolete("Should not be public. Do not use this, it will be removed in an upcoming version.")]
-    public class AnalyticsLifetime : MonoBehaviour
+    internal class AnalyticsContainer : MonoBehaviour
     {
 #if UNITY_WEBGL
         // Heartbeat more frequently on WebGL to reduce the performance impact of serialisation during batching for upload.
@@ -14,22 +13,34 @@ namespace Unity.Services.Analytics
         const float k_HeartbeatPeriod = 60.0f;
         const float k_GameRunningPeriod = 60.0f;
 #endif
+        static bool s_Created;
+        static GameObject s_Container;
+
         float m_HeartbeatTime = 0.0f;
         float m_GameRunningTime = 0.0f;
 
-        internal static AnalyticsLifetime Instance { get; private set; }
+        internal static AnalyticsContainer Instance { get; private set; }
         internal float TimeUntilHeartbeat => k_HeartbeatPeriod - m_HeartbeatTime;
 
-        void Awake()
+        internal static void Initialize()
         {
-            Instance = this;
-            hideFlags = HideFlags.NotEditable | HideFlags.DontSaveInEditor | HideFlags.DontSaveInBuild;
-
-#if !UNITY_ANALYTICS_DEVELOPMENT
-            hideFlags |= HideFlags.HideInInspector;
+            if (!s_Created)
+            {
+#if UNITY_ANALYTICS_DEVELOPMENT
+                Debug.Log("Created Analytics Container");
 #endif
 
-            DontDestroyOnLoad(gameObject);
+                s_Container = new GameObject("AnalyticsContainer");
+                Instance = s_Container.AddComponent<AnalyticsContainer>();
+
+                s_Container.hideFlags = HideFlags.DontSaveInBuild | HideFlags.NotEditable;
+#if !UNITY_ANALYTICS_DEVELOPMENT
+                s_Container.hideFlags |= HideFlags.HideInInspector;
+#endif
+
+                DontDestroyOnLoad(s_Container);
+                s_Created = true;
+            }
         }
 
         void Update()
@@ -53,37 +64,17 @@ namespace Unity.Services.Analytics
             }
         }
 
+        internal static void DestroyContainer()
+        {
+            Destroy(s_Container);
+            s_Created = false;
+        }
+
         void OnDestroy()
         {
             AnalyticsService.internalInstance.GameEnded();
-        }
-    }
 
-    [Obsolete("Should not be public. Do not use this, it will be removed in an upcoming version.")]
-    public static class ContainerObject
-    {
-        static bool s_Created;
-        static GameObject s_Container;
-
-        internal static void Initialize()
-        {
-            if (!s_Created)
-            {
-#if UNITY_ANALYTICS_DEVELOPMENT
-                Debug.Log("Created Analytics Container");
-#endif
-
-                s_Container = new GameObject("AnalyticsContainer");
-                s_Container.AddComponent<AnalyticsLifetime>();
-
-                s_Created = true;
-            }
-        }
-
-        [Obsolete("Should not be public. Do not use this, it will be removed in an upcoming version.")]
-        public static void DestroyContainer()
-        {
-            UnityEngine.Object.Destroy(s_Container);
+            s_Container = null;
             s_Created = false;
         }
     }

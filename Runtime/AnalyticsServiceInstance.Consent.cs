@@ -93,7 +93,7 @@ namespace Unity.Services.Analytics
             dataBuffer.ClearDiskCache();
             dataBuffer = new BufferRevoked();
             dataDispatcher = new Dispatcher(dataBuffer, new WebRequestHelper());
-            ContainerObject.DestroyContainer();
+            AnalyticsContainer.DestroyContainer();
         }
 
         internal void RevokeWithForgetEvent()
@@ -114,7 +114,7 @@ namespace Unity.Services.Analytics
 
         internal void ForgetMeEventUploaded()
         {
-            ContainerObject.DestroyContainer();
+            AnalyticsContainer.DestroyContainer();
             ConsentTracker.FinishOptOutProcess();
 
 #if UNITY_ANALYTICS_EVENT_LOGS

@@ -40,4 +40,3 @@ namespace Unity.Services.Analytics
         }
     }
 }
-

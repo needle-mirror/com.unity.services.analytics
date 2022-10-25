@@ -1,6 +1,7 @@
 using System;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
 using Unity.Services.Core;
 using UnityEngine;
 using UnityEngine.Networking;
@@ -44,7 +45,7 @@ namespace Unity.Services.Analytics.Internal
 
             try
             {
-                var response = JsonUtility.FromJson<GeoIPResponse>(async.webRequest.downloadHandler.text);
+                var response = JsonConvert.DeserializeObject<GeoIPResponse>(async.webRequest.downloadHandler.text);
                 if (response == null)
                 {
                     throw new ConsentCheckException(ConsentCheckExceptionReason.Unknown, CommonErrorCodes.Unknown,

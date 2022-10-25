@@ -31,6 +31,7 @@ class Ua2CoreInitializeCallback : IInitializablePackage
 
         var analyticsUserId = projectConfiguration.GetString("com.unity.services.core.analytics-user-id");
 
+        AnalyticsService.internalInstance = new AnalyticsServiceInstance();
         await AnalyticsService.internalInstance.Initialize(cloudProjectId, installationId, playerId, environments.Current, analyticsUserId);
 
 #if UNITY_ANALYTICS_DEVELOPMENT
@@ -41,7 +42,6 @@ class Ua2CoreInitializeCallback : IInitializablePackage
         );
 #endif
 
-        AnalyticsService.internalInstance.NewPlayerEvent();
         if (AnalyticsService.internalInstance.ConsentTracker.IsGeoIpChecked())
         {
             AnalyticsService.internalInstance.Flush();

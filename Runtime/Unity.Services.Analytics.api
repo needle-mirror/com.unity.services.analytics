@@ -75,7 +75,7 @@ namespace Unity.Services.Analytics
         public const Unity.Services.Analytics.AdProvider Vungle = 13;
     }
 
-    public class AnalyticsLifetime : UnityEngine.MonoBehaviour
+    [System.Obsolete(@"Should not be public. Do not use this, it will be removed in an upcoming version.")] public class AnalyticsLifetime : UnityEngine.MonoBehaviour
     {
         public AnalyticsLifetime() {}
     }
@@ -101,9 +101,9 @@ namespace Unity.Services.Analytics
         public int value__;
     }
 
-    public static class ContainerObject
+    [System.Obsolete(@"Should not be public. Do not use this, it will be removed in an upcoming version.")] public static class ContainerObject
     {
-        public static void DestroyContainer();
+        [System.Obsolete(@"Should not be public. Do not use this, it will be removed in an upcoming version.")] public static void DestroyContainer();
     }
 
     [System.Obsolete(@"The interface provided by this static class has moved to AnalyticsService.Instance, and should be accessed from there instead. This API will be removed in an upcoming release.")] public static class Events
@@ -231,6 +231,7 @@ namespace Unity.Services.Analytics
         public abstract void AdImpression(Unity.Services.Analytics.AdImpressionParameters parameters);
         public abstract System.Threading.Tasks.Task<System.Collections.Generic.List<string>> CheckForRequiredConsents();
         public abstract long ConvertCurrencyToMinorUnits(string currencyCode, double value);
+        public abstract void CustomData(string eventName);
         public abstract void CustomData(string eventName, System.Collections.Generic.IDictionary<string, object> eventParams);
         public abstract void Flush();
         public abstract string GetAnalyticsUserID();
