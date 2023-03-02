@@ -26,7 +26,7 @@ namespace Unity.Services.Analytics
                 Debug.LogError("Required to have a value for placementName.");
             }
 
-            dataGenerator.AdImpression(ref dataBuffer, DateTime.Now, m_CommonParams, "com.unity.services.analytics.events.adimpression", adImpressionParameters);
+            m_DataGenerator.AdImpression(DateTime.Now, m_CommonParams, "com.unity.services.analytics.events.adimpression", adImpressionParameters);
         }
     }
 }

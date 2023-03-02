@@ -31,7 +31,7 @@ namespace Unity.Services.Analytics
                 transactionParameters.PaymentCountry = Internal.Platform.UserCountry.Name();
             }
 
-            dataGenerator.Transaction(ref dataBuffer, DateTime.Now, m_CommonParams, "com.unity.services.analytics.events.transaction", transactionParameters);
+            m_DataGenerator.Transaction(DateTime.Now, m_CommonParams, "com.unity.services.analytics.events.transaction", transactionParameters);
         }
 
         public long ConvertCurrencyToMinorUnits(string currencyCode, double value)
@@ -40,3 +40,27 @@ namespace Unity.Services.Analytics
         }
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

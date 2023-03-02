@@ -4,6 +4,27 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [4.4.0] - 2023-03-02
+
+### Added
+
+* CustomData method now supports IDictionary<string,object>, IList<object> and Enum parameters
+
+### Changed
+
+* Events are now serialised immediately when recorded rather than as part of the upload process. This should alleviate any hitches that might have been experienced during upload (every 60 seconds)
+* Updated `com.unity.services.core` dependency to 1.8.1
+
+### Fixed
+
+* Custom user ID can now be changed at runtime (by updating `UnityServices.ExternalUserId`)
+* Recording a single event that is too big to upload (over 4MB) no longer prevents any further events from being uploaded (event is immediately discarded with a warning)
+* Session ID is now refreshed when application is paused for over 5 minutes (when Run In Background is false)
+
+### Deprecated
+
+* The `RecordEvent(Event event)` API is no longer supported and will be removed in a future version
+
 ## [4.3.0] - 2022-10-25
 
 ### Added

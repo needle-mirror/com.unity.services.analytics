@@ -237,7 +237,7 @@ namespace Unity.Services.Analytics
         public abstract string GetAnalyticsUserID();
         public abstract void OptOut();
         public abstract void ProvideOptInConsent(string identifier, bool consent);
-        public abstract void RecordInternalEvent(Unity.Services.Analytics.Internal.Event eventToRecord);
+        [System.Obsolete(@"This mechanism is no longer supported and will be removed in a future version. Use the new Core IAnalyticsStandardEventComponent API instead.")] public abstract void RecordInternalEvent(Unity.Services.Analytics.Internal.Event eventToRecord);
         public abstract System.Threading.Tasks.Task SetAnalyticsEnabled(bool enabled);
         public abstract void Transaction(Unity.Services.Analytics.TransactionParameters transactionParameters);
         public abstract void TransactionFailed(Unity.Services.Analytics.TransactionFailedParameters parameters);
@@ -345,7 +345,7 @@ namespace Unity.Services.Analytics
 
 namespace Unity.Services.Analytics.Internal
 {
-    public class Event
+    [System.Obsolete(@"This mechanism is no longer supported and will be removed in a future version. Use the new Core IAnalyticsStandardEventComponent API instead.")] public class Event
     {
         public string Name { get; }
         public Unity.Services.Analytics.Internal.EventData Parameters { get; }

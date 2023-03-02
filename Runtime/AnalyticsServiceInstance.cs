@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Threading.Tasks;
 using Unity.Services.Analytics.Data;
 using Unity.Services.Analytics.Internal;
@@ -11,127 +13,123 @@ using Event = Unity.Services.Analytics.Internal.Event;
 
 namespace Unity.Services.Analytics
 {
-    partial class AnalyticsServiceInstance : IAnalyticsService
+    internal interface IAnalyticsServiceSystemCalls
+    {
+        DateTime UtcNow { get; }
+    }
+
+    internal class AnalyticsServiceSystemCalls : IAnalyticsServiceSystemCalls
+    {
+        public DateTime UtcNow
+        {
+            get { return DateTime.UtcNow; }
+        }
+    }
+
+    internal interface IUnstructuredEventRecorder
+    {
+        void CustomData(string eventName,
+            IDictionary<string, object> eventParams,
+            Int32? eventVersion,
+            bool includeCommonParams,
+            bool includePlayerIds,
+            string callingMethodIdentifier);
+    }
+
+    partial class AnalyticsServiceInstance : IAnalyticsService, IUnstructuredEventRecorder
     {
         public string PrivacyUrl => "https://unity3d.com/legal/privacy-policy";
 
         const string k_CollectUrlPattern = "https://collect.analytics.unity3d.com/api/analytics/collect/v1/projects/{0}/environments/{1}";
         const string k_ForgetCallingId = "com.unity.services.analytics.Events." + nameof(OptOut);
+        const string m_StartUpCallingId = "com.unity.services.analytics.Events.Startup";
 
-        internal IPlayerId PlayerId { get; private set; }
-        internal IInstallationId InstallId { get; private set; }
-        internal ICloudProjectId CloudProjectIdProvider { get; private set; }
-        internal string CloudProjectId => CloudProjectIdProvider?.GetCloudProjectId() ?? Application.cloudProjectId;
+        readonly TimeSpan k_BackgroundSessionRefreshPeriod = TimeSpan.FromMinutes(5);
 
-        internal string CustomAnalyticsId { get; private set; }
+        readonly string m_CollectURL;
+        readonly StdCommonParams m_CommonParams;
+        readonly IPlayerId m_PlayerId;
+        readonly IInstallationId m_InstallId;
+        readonly IDataGenerator m_DataGenerator;
+        readonly ICoreStatsHelper m_CoreStatsHelper;
+        readonly IConsentTracker m_ConsentTracker;
+        readonly IDispatcher m_DataDispatcher;
+        readonly IAnalyticsForgetter m_AnalyticsForgetter;
+        readonly IExternalUserId m_CustomUserId;
+        readonly IAnalyticsServiceSystemCalls m_SystemCalls;
 
-        internal IBuffer dataBuffer = new Internal.Buffer(new BufferSystemCalls());
-        int m_BufferLengthAtLastGameRunning;
+        readonly IBuffer m_RealBuffer;
+        readonly IBuffer m_RevokedBuffer;
 
-        internal IDataGenerator dataGenerator = new DataGenerator();
+        internal IBuffer m_DataBuffer;
 
-        internal IDispatcher dataDispatcher { get; set; }
-
-        string m_CollectURL;
-        readonly StdCommonParams m_CommonParams = new StdCommonParams();
-        readonly string m_StartUpCallingId = "com.unity.services.analytics.Events.Startup";
-
-        internal IIDeviceIdentifiersInternal deviceIdentifiersInternal = new DeviceIdentifiersInternal();
-
+        internal string CustomAnalyticsId { get { return m_CustomUserId.UserId; } }
         internal bool ServiceEnabled { get; private set; } = true;
 
-        internal ICoreStatsHelper m_CoreStatsHelper = new CoreStatsHelper();
-        internal IConsentTracker ConsentTracker;
+        public string SessionID { get; private set; }
 
-        public string SessionID { get; }
+        int m_BufferLengthAtLastGameRunning;
+        DateTime m_ApplicationPauseTime;
 
-        internal AnalyticsServiceInstance()
+        internal AnalyticsServiceInstance(IDataGenerator dataGenerator,
+                                          IBuffer realBuffer,
+                                          IBuffer revokedBuffer,
+                                          ICoreStatsHelper coreStatsHelper,
+                                          IConsentTracker consentTracker,
+                                          IDispatcher dispatcher,
+                                          IAnalyticsForgetter forgetter,
+                                          ICloudProjectId cloudProjectId,
+                                          IInstallationId installId,
+                                          IPlayerId playerId,
+                                          string environment,
+                                          IExternalUserId customAnalyticsId,
+                                          IAnalyticsServiceSystemCalls systemCalls)
         {
-            ConsentTracker = new ConsentTracker(m_CoreStatsHelper);
+            m_CustomUserId = customAnalyticsId;
 
-            // Add a check to ensure a project id is set.
-            if (string.IsNullOrEmpty(Application.cloudProjectId))
+            m_DataGenerator = dataGenerator;
+            m_SystemCalls = systemCalls;
+
+            m_RealBuffer = realBuffer;
+            m_RevokedBuffer = revokedBuffer;
+
+            m_CoreStatsHelper = coreStatsHelper;
+            m_ConsentTracker = consentTracker;
+            m_DataDispatcher = dispatcher;
+
+            SwapToRealBuffer();
+
+            m_AnalyticsForgetter = forgetter;
+
+            m_CommonParams = new StdCommonParams
             {
-                Debug.LogError("No cloud project ID was found by the Analytics SDK. This means Analytics events will not be sent. Please make sure to link your cloud project in the Unity editor to fix this problem.");
-                return;
-            }
+                ClientVersion = Application.version,
+                ProjectID = Application.cloudProjectId,
+                GameBundleID = Application.identifier,
+                Platform = Runtime.Name(),
+                BuildGuuid = Application.buildGUID,
+                Idfv = SystemInfo.deviceUniqueIdentifier
+            };
 
-            dataDispatcher = new Dispatcher(dataBuffer, new WebRequestHelper(), ConsentTracker);
+            m_InstallId = installId;
+            m_PlayerId = playerId;
 
-            SessionID = Guid.NewGuid().ToString();
+            string projectId = cloudProjectId?.GetCloudProjectId() ?? Application.cloudProjectId;
+            m_CommonParams.ProjectID = projectId;
+            m_CollectURL = String.Format(k_CollectUrlPattern, projectId, environment.ToLowerInvariant());
 
-            m_CommonParams.ClientVersion = Application.version;
-            m_CommonParams.ProjectID = Application.cloudProjectId;
-            m_CommonParams.GameBundleID = Application.identifier;
-            m_CommonParams.Platform = Runtime.Name();
-            m_CommonParams.BuildGuuid = Application.buildGUID;
-            m_CommonParams.Idfv = deviceIdentifiersInternal.Idfv;
-        }
+            m_DataBuffer.UserID = GetAnalyticsUserID();
+            m_DataBuffer.InstallID = m_InstallId.GetOrCreateIdentifier();
 
-        public void Flush()
-        {
-            if (!ServiceEnabled)
-            {
-                return;
-            }
+            RefreshSessionID();
 
-            if (string.IsNullOrEmpty(CloudProjectId))
-            {
-                return;
-            }
-
-            if (InstallId == null)
-            {
 #if UNITY_ANALYTICS_DEVELOPMENT
-                Debug.Log("The Core callback hasn't yet triggered.");
+            Debug.LogFormat("UA2 Setup\nCollectURL: {0}\nSessionID: {1}", m_CollectURL, SessionID);
 #endif
-
-                return;
-            }
-
-            if (ConsentTracker.IsGeoIpChecked() && ConsentTracker.IsConsentGiven())
-            {
-                dataBuffer.InstallID = InstallId.GetOrCreateIdentifier();
-                dataBuffer.PlayerID = PlayerId?.PlayerId;
-
-                dataBuffer.UserID = GetAnalyticsUserID();
-
-                dataBuffer.SessionID = SessionID;
-                dataDispatcher.CollectUrl = m_CollectURL;
-                dataDispatcher.Flush();
-            }
-
-            if (ConsentTracker.IsOptingOutInProgress())
-            {
-                analyticsForgetter.AttemptToForget();
-            }
         }
 
-        public void RecordInternalEvent(Event eventToRecord)
+        internal async Task Initialize()
         {
-            if (!ServiceEnabled)
-            {
-                return;
-            }
-
-            dataBuffer.PushEvent(eventToRecord);
-        }
-
-        internal void SetDependencies(ICloudProjectId cloudProjectId, IInstallationId installId, IPlayerId playerId, string environment, string customAnalyticsId)
-        {
-            CloudProjectIdProvider = cloudProjectId;
-            InstallId = installId;
-            PlayerId = playerId;
-            CustomAnalyticsId = customAnalyticsId;
-
-            m_CommonParams.ProjectID = CloudProjectId;
-            m_CollectURL = string.Format(k_CollectUrlPattern, CloudProjectId, environment.ToLowerInvariant());
-        }
-
-        internal async Task Initialize(ICloudProjectId cloudProjectId, IInstallationId installId, IPlayerId playerId, string environment, string customAnalyticsId)
-        {
-            SetDependencies(cloudProjectId, installId, playerId, environment, customAnalyticsId);
-
             if (ServiceEnabled)
             {
                 AnalyticsContainer.Initialize();
@@ -147,15 +145,11 @@ namespace Unity.Services.Analytics
         {
             SetVariableCommonParams();
 
-#if UNITY_ANALYTICS_DEVELOPMENT
-            Debug.LogFormat("UA2 Setup\nCollectURL:{0}\nSessionID:{1}", m_CollectURL, SessionID);
-#endif
-
             try
             {
-                await ConsentTracker.CheckGeoIP();
+                await m_ConsentTracker.CheckGeoIP();
 
-                if (ConsentTracker.IsGeoIpChecked() && (ConsentTracker.IsConsentDenied() || ConsentTracker.IsOptingOutInProgress()))
+                if (m_ConsentTracker.IsGeoIpChecked() && (m_ConsentTracker.IsConsentDenied() || m_ConsentTracker.IsOptingOutInProgress()))
                 {
                     OptOut();
                 }
@@ -175,8 +169,8 @@ namespace Unity.Services.Analytics
         void RecordStartupEvents()
         {
             // Startup Events.
-            dataGenerator.SdkStartup(ref dataBuffer, DateTime.Now, m_CommonParams, m_StartUpCallingId);
-            dataGenerator.ClientDevice(ref dataBuffer, DateTime.Now, m_CommonParams, m_StartUpCallingId, SystemInfo.processorType, SystemInfo.graphicsDeviceName, SystemInfo.processorCount, SystemInfo.systemMemorySize, Screen.width, Screen.height, (int)Screen.dpi);
+            m_DataGenerator.SdkStartup(DateTime.Now, m_CommonParams, m_StartUpCallingId);
+            m_DataGenerator.ClientDevice(DateTime.Now, m_CommonParams, m_StartUpCallingId, SystemInfo.processorType, SystemInfo.graphicsDeviceName, SystemInfo.processorCount, SystemInfo.systemMemorySize, Screen.width, Screen.height, (int)Screen.dpi);
 
 #if UNITY_DOTSRUNTIME
             var isTiny = true;
@@ -184,12 +178,85 @@ namespace Unity.Services.Analytics
             var isTiny = false;
 #endif
 
-            dataGenerator.GameStarted(ref dataBuffer, DateTime.Now, m_CommonParams, m_StartUpCallingId, Application.buildGUID, SystemInfo.operatingSystem, isTiny, DebugDevice.IsDebugDevice(), Locale.AnalyticsRegionLanguageCode());
+            m_DataGenerator.GameStarted(DateTime.Now, m_CommonParams, m_StartUpCallingId, Application.buildGUID, SystemInfo.operatingSystem, isTiny, DebugDevice.IsDebugDevice(), Locale.AnalyticsRegionLanguageCode());
 
-            if (InstallId != null && new InternalNewPlayerHelper(InstallId).IsNewPlayer())
+            if (m_InstallId != null && new InternalNewPlayerHelper(m_InstallId).IsNewPlayer())
             {
-                dataGenerator.NewPlayer(ref dataBuffer, DateTime.Now, m_CommonParams, m_StartUpCallingId, SystemInfo.deviceModel);
+                m_DataGenerator.NewPlayer(DateTime.Now, m_CommonParams, m_StartUpCallingId, SystemInfo.deviceModel);
             }
+        }
+
+        public string GetAnalyticsUserID()
+        {
+            return !String.IsNullOrEmpty(CustomAnalyticsId) ? CustomAnalyticsId : m_InstallId.GetOrCreateIdentifier();
+        }
+
+        internal void ApplicationPaused(bool paused)
+        {
+            if (paused)
+            {
+                m_ApplicationPauseTime = m_SystemCalls.UtcNow;
+#if UNITY_ANALYTICS_DEVELOPMENT
+                Debug.Log("Analytics SDK detected application pause at: " + m_ApplicationPauseTime.ToString());
+#endif
+            }
+            else
+            {
+                DateTime now = m_SystemCalls.UtcNow;
+
+#if UNITY_ANALYTICS_DEVELOPMENT
+                Debug.Log("Analytics SDK detected application unpause at: " + now);
+#endif
+                if (now > m_ApplicationPauseTime + k_BackgroundSessionRefreshPeriod)
+                {
+                    RefreshSessionID();
+                }
+            }
+        }
+
+        internal void RefreshSessionID()
+        {
+            SessionID = Guid.NewGuid().ToString();
+            m_DataBuffer.SessionID = SessionID;
+
+#if UNITY_ANALYTICS_DEVELOPMENT
+            Debug.Log("Analytics SDK started new session: " + SessionID);
+#endif
+        }
+
+        public void Flush()
+        {
+            if (!ServiceEnabled)
+            {
+                return;
+            }
+
+            if (m_ConsentTracker.IsGeoIpChecked() && m_ConsentTracker.IsConsentGiven())
+            {
+                m_DataBuffer.InstallID = m_InstallId.GetOrCreateIdentifier();
+                m_DataBuffer.PlayerID = m_PlayerId?.PlayerId;
+                m_DataBuffer.UserID = GetAnalyticsUserID();
+                m_DataBuffer.SessionID = SessionID;
+
+                m_DataDispatcher.CollectUrl = m_CollectURL;
+                m_DataDispatcher.Flush();
+            }
+
+            if (m_ConsentTracker.IsOptingOutInProgress())
+            {
+                m_AnalyticsForgetter.AttemptToForget(k_ForgetCallingId, m_CollectURL, m_InstallId.GetOrCreateIdentifier(), BufferX.SerializeDateTime(DateTime.Now), ForgetMeEventUploaded);
+            }
+        }
+
+        [Obsolete("This mechanism is no longer supported and will be removed in a future version. Use the new Core IAnalyticsStandardEventComponent API instead.")]
+        public void RecordInternalEvent(Event eventToRecord)
+        {
+            if (!ServiceEnabled)
+            {
+                return;
+            }
+
+            m_DataBuffer.PushEvent(eventToRecord);
         }
 
         /// <summary>
@@ -202,10 +269,10 @@ namespace Unity.Services.Analytics
                 return;
             }
 
-            dataGenerator.GameEnded(ref dataBuffer, DateTime.Now, m_CommonParams, "com.unity.services.analytics.Events.Shutdown", DataGenerator.SessionEndState.QUIT);
+            m_DataGenerator.GameEnded(DateTime.Now, m_CommonParams, "com.unity.services.analytics.Events.Shutdown", DataGenerator.SessionEndState.QUIT);
 
             // Need to null check the consent tracker here in case the game ends before the tracker can be initialised.
-            if (ConsentTracker != null && ConsentTracker.IsGeoIpChecked())
+            if (m_ConsentTracker != null && m_ConsentTracker.IsGeoIpChecked())
             {
                 Flush();
             }
@@ -215,15 +282,15 @@ namespace Unity.Services.Analytics
         {
             if (ServiceEnabled)
             {
-                if (dataBuffer.Length == 0 || dataBuffer.Length == m_BufferLengthAtLastGameRunning)
+                if (m_DataBuffer.Length == 0 || m_DataBuffer.Length == m_BufferLengthAtLastGameRunning)
                 {
                     SetVariableCommonParams();
-                    dataGenerator.GameRunning(ref dataBuffer, DateTime.Now, m_CommonParams, "com.unity.services.analytics.AnalyticsServiceInstance.RecordGameRunningIfNecessary");
-                    m_BufferLengthAtLastGameRunning = dataBuffer.Length;
+                    m_DataGenerator.GameRunning(DateTime.Now, m_CommonParams, "com.unity.services.analytics.AnalyticsServiceInstance.RecordGameRunningIfNecessary");
+                    m_BufferLengthAtLastGameRunning = m_DataBuffer.Length;
                 }
                 else
                 {
-                    m_BufferLengthAtLastGameRunning = dataBuffer.Length;
+                    m_BufferLengthAtLastGameRunning = m_DataBuffer.Length;
                 }
             }
         }
@@ -234,7 +301,7 @@ namespace Unity.Services.Analytics
         internal void InternalTick()
         {
             if (ServiceEnabled &&
-                ConsentTracker.IsGeoIpChecked())
+                m_ConsentTracker.IsGeoIpChecked())
             {
                 Flush();
             }
@@ -242,10 +309,9 @@ namespace Unity.Services.Analytics
 
         void SetVariableCommonParams()
         {
-            m_CommonParams.Idfv = deviceIdentifiersInternal.Idfv;
             m_CommonParams.DeviceVolume = DeviceVolumeProvider.GetDeviceVolume();
             m_CommonParams.BatteryLoad = SystemInfo.batteryLevel;
-            m_CommonParams.UasUserID = PlayerId?.PlayerId;
+            m_CommonParams.UasUserID = m_PlayerId?.PlayerId;
         }
 
         void GameEnded(DataGenerator.SessionEndState quitState)
@@ -255,27 +321,44 @@ namespace Unity.Services.Analytics
                 return;
             }
 
-            dataGenerator.GameEnded(ref dataBuffer, DateTime.Now, m_CommonParams, "com.unity.services.analytics.Events.GameEnded", quitState);
+            m_DataGenerator.GameEnded(DateTime.Now, m_CommonParams, "com.unity.services.analytics.Events.GameEnded", quitState);
         }
 
         public async Task SetAnalyticsEnabled(bool enabled)
         {
             if (enabled && !ServiceEnabled)
             {
-                dataBuffer = new Internal.Buffer(new BufferSystemCalls());
-                dataDispatcher = new Dispatcher(dataBuffer, new WebRequestHelper(), ConsentTracker);
+                SwapToRealBuffer();
+
                 await InitializeUser();
 
                 ServiceEnabled = true;
             }
             else if (!enabled && ServiceEnabled)
             {
-                dataBuffer.ClearBuffer();
-                dataBuffer.ClearDiskCache();
-                dataBuffer = new BufferRevoked();
+                SwapToRevokedBuffer();
 
                 ServiceEnabled = false;
             }
+        }
+
+        void SwapToRevokedBuffer()
+        {
+            // Clear everything out of the real buffer and replace it with a dummy
+            // that will swallow all events and do nothing
+            m_RealBuffer.ClearBuffer();
+            m_RealBuffer.ClearDiskCache();
+            m_DataBuffer = m_RevokedBuffer;
+            m_DataGenerator.SetBuffer(m_RevokedBuffer);
+            m_DataDispatcher.SetBuffer(m_RevokedBuffer);
+        }
+
+        void SwapToRealBuffer()
+        {
+            // Reinstate the real buffer so events will be recorded again
+            m_DataBuffer = m_RealBuffer;
+            m_DataGenerator.SetBuffer(m_RealBuffer);
+            m_DataDispatcher.SetBuffer(m_RealBuffer);
         }
     }
 }

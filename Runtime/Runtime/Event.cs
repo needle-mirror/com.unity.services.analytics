@@ -1,7 +1,9 @@
+using System;
 using UnityEngine;
 
 namespace Unity.Services.Analytics.Internal
 {
+    [Obsolete("This mechanism is no longer supported and will be removed in a future version. Use the new Core IAnalyticsStandardEventComponent API instead.")]
     public class Event
     {
         public Event(string name, int? version)

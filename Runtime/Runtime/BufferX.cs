@@ -14,19 +14,16 @@ namespace Unity.Services.Analytics.Internal
     {
         string GenerateGuid();
         DateTime Now();
-
-        bool CanAccessFileSystem();
-        bool FileExists(string path);
-        void WriteFile(string path, byte[] bytes);
-        byte[] ReadFile(string path);
-        void DeleteFile(string path);
     }
 
     class BufferSystemCalls : IBufferSystemCalls
     {
         public string GenerateGuid()
         {
-            // TODO: investigate direct .ToByteArray()
+            // NOTE: we are not using .ToByteArray because we do actually need a valid string.
+            // Even though the buffer is all bytes, it is ultimately for JSON, so it has to be
+            // UTF8 string bytes rather than raw bytes (the string also includes hyphenated
+            // subsections).
             return Guid.NewGuid().ToString();
         }
 
@@ -34,67 +31,42 @@ namespace Unity.Services.Analytics.Internal
         {
             return DateTime.Now;
         }
-
-        public bool CanAccessFileSystem()
-        {
-            // Switch requires a specific setup to have write access to the disc so it won't be handled here.
-            return
-                Application.platform != RuntimePlatform.Switch &&
-#if !UNITY_2021_1_OR_NEWER
-                Application.platform != RuntimePlatform.XboxOne &&
-#endif
-#if UNITY_2019 || UNITY_2020_2_OR_NEWER
-                Application.platform != RuntimePlatform.GameCoreXboxOne &&
-                Application.platform != RuntimePlatform.GameCoreXboxSeries &&
-                Application.platform != RuntimePlatform.PS5 &&
-#endif
-                Application.platform != RuntimePlatform.PS4 &&
-                !String.IsNullOrEmpty(Application.persistentDataPath);
-        }
-
-        public bool FileExists(string path)
-        {
-            return File.Exists(path);
-        }
-
-        public void WriteFile(string path, byte[] bytes)
-        {
-            File.WriteAllBytes(path, bytes);
-        }
-
-        public byte[] ReadFile(string path)
-        {
-            return File.ReadAllBytes(path);
-        }
-
-        public void DeleteFile(string path)
-        {
-            File.Delete(path);
-        }
     }
 
     class BufferX : IBuffer
     {
-        const long k_CacheFileMaximumSize = 1024 * 1024 * 5;
-        readonly string k_CacheFilePath = $"{Application.persistentDataPath}/ugs_analytics_cache";
+        // 4MB: 4 * 1024 KB to make an MB and * 1024 bytes to make a KB
+        // The Collect endpoint can actually accept payloads of up to 5MB (at time of writing, Jan 2023),
+        // but we want to retain some headroom... just in case.
+        const long k_UploadBatchMaximumSizeInBytes = 4 * 1024 * 1024;
+        const string k_BufferHeader = "{\"eventList\":[";
+
         const string k_SecondDateFormat = "yyyy-MM-dd HH:mm:ss zzz";
         const string k_MillisecondDateFormat = "yyyy-MM-dd HH:mm:ss.fff zzz";
-        static readonly string[] k_AllDateFormats = { k_SecondDateFormat, k_MillisecondDateFormat };
-
-        readonly MemoryStream m_Buffer;
         readonly IBufferSystemCalls m_SystemCalls;
+        readonly IDiskCache m_DiskCache;
+
+        readonly List<int> m_EventEnds;
+
+        MemoryStream m_SpareBuffer;
+        MemoryStream m_Buffer;
 
         public string UserID { get; set; }
         public string InstallID { get; set; }
         public string PlayerID { get; set; }
         public string SessionID { get; set; }
 
-        public int Length => (int)m_Buffer.Length;
+        public int Length { get { return (int)m_Buffer.Length; } }
 
         /// <summary>
         /// The number of events that have been recorded into this buffer.
         /// </summary>
-        internal int EventsRecorded { get; private set; }
+        internal int EventsRecorded { get { return m_EventEnds.Count; } }
+
+        /// <summary>
+        /// The byte index of the end of each event blob in the bytestream.
+        /// </summary>
+        internal IReadOnlyList<int> EventEndIndices => m_EventEnds;
 
         /// <summary>
         /// The raw contents of the underlying bytestream.
@@ -102,10 +74,14 @@ namespace Unity.Services.Analytics.Internal
         /// </summary>
         internal byte[] RawContents => m_Buffer.ToArray();
 
-        public BufferX(IBufferSystemCalls eventIdGenerator)
+        public BufferX(IBufferSystemCalls eventIdGenerator, IDiskCache diskCache)
         {
             m_Buffer = new MemoryStream();
+            m_SpareBuffer = new MemoryStream();
+            m_EventEnds = new List<int>();
+
             m_SystemCalls = eventIdGenerator;
+            m_DiskCache = diskCache;
 
             ClearBuffer();
         }
@@ -122,7 +98,7 @@ namespace Unity.Services.Analytics.Internal
         public void PushStartEvent(string name, DateTime datetime, long? eventVersion, bool addPlayerIdsToEventBody)
         {
 #if UNITY_ANALYTICS_EVENT_LOGS
-            Debug.LogFormat("Recorded event {0} at {1} (UTC)", name, SerializeDateTime(datetime));
+            Debug.LogFormat("Recording event {0} at {1} (UTC)...", name, SerializeDateTime(datetime));
 #endif
             WriteString("{");
             WriteString("\"eventName\":\"");
@@ -190,7 +166,28 @@ namespace Unity.Services.Analytics.Internal
             // Close params block, close event object, comma to prepare for next item
             WriteString("}},");
 
-            EventsRecorded++;
+            int bufferLength = (int)m_Buffer.Length;
+
+            // If this event is too big to ever be uploaded, clear the buffer so we don't get stuck forever.
+            int eventSize = m_EventEnds.Count > 0 ? bufferLength - m_EventEnds[m_EventEnds.Count - 1] : bufferLength;
+
+            if (eventSize > k_UploadBatchMaximumSizeInBytes)
+            {
+                Debug.LogWarning($"Detected event that would be too big to upload (greater than {k_UploadBatchMaximumSizeInBytes / 1024}KB in size), discarding it to prevent blockage.");
+
+                int previousBufferLength = m_EventEnds.Count > 0 ? m_EventEnds[m_EventEnds.Count - 1] : k_BufferHeader.Length;
+
+                m_Buffer.SetLength(previousBufferLength);
+                m_Buffer.Position = previousBufferLength;
+            }
+            else
+            {
+                m_EventEnds.Add(bufferLength);
+
+#if UNITY_ANALYTICS_DEVELOPMENT
+                Debug.Log($"Event {m_EventEnds.Count} ended at: {bufferLength}");
+#endif
+            }
         }
 
         public void PushObjectStart(string name = null)
@@ -308,6 +305,7 @@ namespace Unity.Services.Analytics.Internal
             WriteString("\",");
         }
 
+        [Obsolete("This mechanism is no longer supported and will be removed in a future version. Use the new Core IAnalyticsStandardEventComponent API instead.")]
         public void PushEvent(Event evt)
         {
             // Serialize event
@@ -350,22 +348,36 @@ namespace Unity.Services.Analytics.Internal
             PushEndEvent();
         }
 
-        public byte[] Serialize(List<Buffer.Token> tokens)
+        public byte[] Serialize()
         {
-            if (EventsRecorded > 0)
+            if (m_EventEnds.Count > 0)
             {
-                StripTrailingCommaIfNecessary();
-                var end = m_Buffer.Position;
+                long originalBufferPosition = m_Buffer.Position;
 
-                WriteString("]}");
-                var payload = m_Buffer.ToArray();
+                // Tick through the event end indices until we find the last complete event
+                // that fits into the maximum payload size.
+                int end = m_EventEnds[0];
+                int nextEnd = 0;
+                while (nextEnd < m_EventEnds.Count &&
+                       m_EventEnds[nextEnd] < k_UploadBatchMaximumSizeInBytes)
+                {
+                    end = m_EventEnds[nextEnd];
+                    nextEnd++;
+                }
 
-                // Reset the position and put the trailing comma back, so if we add new events,
-                // they don't start after the footer. If this payload fails to upload, we will
-                // want to include the newer events.
-                m_Buffer.SetLength(end);
-                m_Buffer.Position = end;
-                WriteString(",");
+                // Extend the payload so we can fit the suffix.
+                byte[] payload = new byte[end + 1];
+                m_Buffer.Position = 0;
+                m_Buffer.Read(payload, 0, end);
+
+                // NOTE: the final character will be a comma that we don't want,
+                // so take this opportunity to overwrite it with the closing
+                // bracket (event list) and brace (payload object).
+                byte[] suffix = Encoding.UTF8.GetBytes("]}");
+                payload[end - 1] = suffix[0];
+                payload[end] = suffix[1];
+
+                m_Buffer.Position = originalBufferPosition;
 
                 return payload;
             }
@@ -379,76 +391,72 @@ namespace Unity.Services.Analytics.Internal
         {
             m_Buffer.SetLength(0);
             m_Buffer.Position = 0;
+            WriteString(k_BufferHeader);
 
-            EventsRecorded = 0;
-
-            WriteString("{\"eventList\":[");
+            m_EventEnds.Clear();
         }
 
-        //
-        // TODO: disk access?
-        //
+        public void ClearBuffer(long upTo)
+        {
+            MemoryStream oldBuffer = m_Buffer;
+            m_Buffer = m_SpareBuffer;
+            m_SpareBuffer = oldBuffer;
+
+            // We want to keep the end markers for events that have been copied over.
+            // We have to account for the start point change AND remove markers for events before the clear point.
+
+            int lastClearedEventIndex = 0;
+            for (int i = 0; i < m_EventEnds.Count; i++)
+            {
+                m_EventEnds[i] = m_EventEnds[i] - (int)upTo + k_BufferHeader.Length;
+                if (m_EventEnds[i] <= k_BufferHeader.Length)
+                {
+                    lastClearedEventIndex = i;
+                }
+            }
+            m_EventEnds.RemoveRange(0, lastClearedEventIndex + 1);
+
+            // Reset the buffer back to a blank state...
+            m_Buffer.SetLength(0);
+            m_Buffer.Position = 0;
+            WriteString(k_BufferHeader);
+
+            // ... and copy over anything that came after the cut-off point.
+            m_SpareBuffer.Position = upTo;
+            for (long i = upTo; i < m_SpareBuffer.Length; i++)
+            {
+                byte b = (byte)m_SpareBuffer.ReadByte();
+                m_Buffer.WriteByte(b);
+            }
+
+            m_SpareBuffer.SetLength(0);
+            m_SpareBuffer.Position = 0;
+        }
 
         public void FlushToDisk()
         {
-            if (m_SystemCalls.CanAccessFileSystem())
-            {
-                ClearDiskCache();
-
-                if (EventsRecorded > 0)
-                {
-                    m_SystemCalls.WriteFile(k_CacheFilePath, m_Buffer.ToArray());
-                }
-            }
+            m_DiskCache.Write(m_EventEnds, m_Buffer);
         }
 
         public void ClearDiskCache()
         {
-            if (m_SystemCalls.CanAccessFileSystem() &&
-                m_SystemCalls.FileExists(k_CacheFilePath))
-            {
-                m_SystemCalls.DeleteFile(k_CacheFilePath);
-            }
+            m_DiskCache.Clear();
         }
 
         public void LoadFromDisk()
         {
-            if (m_SystemCalls.CanAccessFileSystem() &&
-                m_SystemCalls.FileExists(k_CacheFilePath))
+            bool success = m_DiskCache.Read(m_EventEnds, m_Buffer);
+
+            if (!success)
             {
-                // NOTE: we are NOT calling ClearBuffer because we are completely overwriting it
-                // with the file contents. The file will include the payload header.
-                m_Buffer.SetLength(0);
-                m_Buffer.Position = 0;
-
-                var cacheFile = m_SystemCalls.ReadFile(k_CacheFilePath);
-                m_Buffer.Write(cacheFile, 0, cacheFile.Length);
-
-                // We do not store any event metadata in the file, so we can't actually know how many events there are.
-                // However, we will only create a file at all if there is one event or more, so setting this
-                // value to "greater than zero" is really all that matters.
-                // TODO: Could store a single-byte count prefix?
-                EventsRecorded = 1;
+                // Reset the buffer in case we failed half-way through populating it.
+                ClearBuffer();
             }
         }
 
-        static string SerializeDateTime(DateTime dateTime)
+        internal static string SerializeDateTime(DateTime dateTime)
         {
             return dateTime.ToString(k_MillisecondDateFormat, CultureInfo.InvariantCulture);
-        }
-
-        //
-        // TODO: bin these during installation and/or replace with modern equivalents
-        //
-
-        public List<Buffer.Token> CloneTokens()
-        {
-            throw new NotImplementedException();
-        }
-
-        public void InsertTokens(List<Buffer.Token> tokens)
-        {
-            throw new NotImplementedException();
         }
     }
 }

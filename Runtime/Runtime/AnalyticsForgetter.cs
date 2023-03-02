@@ -7,22 +7,34 @@ namespace Unity.Services.Analytics.Internal
 {
     interface IAnalyticsForgetter
     {
-        void AttemptToForget();
+        void AttemptToForget(string collectUrl, string userId, string timestamp, string callingMethod, Action successfulUploadCallback);
     }
 
     class AnalyticsForgetter : IAnalyticsForgetter
     {
-        readonly string s_CollectUrl;
-        readonly byte[] s_Event;
-        readonly Action s_Callback;
+        string m_CollectUrl;
+        byte[] m_Event;
+        Action m_Callback;
 
         bool m_SuccessfullyUploaded;
         UnityWebRequestAsyncOperation m_Request;
-        IConsentTracker ConsentTracker { get; }
+        readonly IConsentTracker ConsentTracker;
 
-        public AnalyticsForgetter(string collectUrl, string userId, string timestamp, string callingMethod,
-                                  Action successfulUploadCallback, IConsentTracker consentTracker = null)
+        public AnalyticsForgetter(IConsentTracker consentTracker)
         {
+            ConsentTracker = consentTracker;
+        }
+
+        public void AttemptToForget(string collectUrl, string userId, string timestamp, string callingMethod, Action successfulUploadCallback)
+        {
+            if (m_Request != null || m_SuccessfullyUploaded)
+            {
+                return;
+            }
+
+            m_CollectUrl = collectUrl;
+            m_Callback = successfulUploadCallback;
+
             // NOTE: we cannot use String.Format on JSON because it gets confused by all the {}s
             var eventJson =
                 "{\"eventList\":[{" +
@@ -36,21 +48,10 @@ namespace Unity.Services.Analytics.Internal
                 "\"sdkMethod\":\"" + callingMethod + "\"" +
                 "}}]}";
 
-            s_Event = Encoding.UTF8.GetBytes(eventJson);
-            s_CollectUrl = collectUrl;
-            s_Callback = successfulUploadCallback;
-            ConsentTracker = consentTracker;
-        }
+            m_Event = Encoding.UTF8.GetBytes(eventJson);
 
-        public void AttemptToForget()
-        {
-            if (m_Request != null || m_SuccessfullyUploaded)
-            {
-                return;
-            }
-
-            var request = new UnityWebRequest(s_CollectUrl, UnityWebRequest.kHttpVerbPOST);
-            var upload = new UploadHandlerRaw(s_Event)
+            var request = new UnityWebRequest(m_CollectUrl, UnityWebRequest.kHttpVerbPOST);
+            var upload = new UploadHandlerRaw(m_Event)
             {
                 contentType = "application/json"
             };
@@ -79,7 +80,7 @@ namespace Unity.Services.Analytics.Internal
 #endif
             {
                 m_SuccessfullyUploaded = true;
-                s_Callback();
+                m_Callback();
             }
 
             // Clear the request to allow another request to be sent.

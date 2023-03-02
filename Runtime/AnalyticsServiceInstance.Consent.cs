@@ -9,23 +9,21 @@ namespace Unity.Services.Analytics
 {
     partial class AnalyticsServiceInstance
     {
-        internal IAnalyticsForgetter analyticsForgetter;
-
         public async Task<List<string>> CheckForRequiredConsents()
         {
-            var response = await ConsentTracker.CheckGeoIP();
+            var response = await m_ConsentTracker.CheckGeoIP();
 
             if (response.identifier == Consent.None)
             {
                 return new List<string>();
             }
 
-            if (ConsentTracker.IsConsentDenied())
+            if (m_ConsentTracker.IsConsentDenied())
             {
                 return new List<string>();
             }
 
-            if (!ConsentTracker.IsConsentGiven())
+            if (!m_ConsentTracker.IsConsentGiven())
             {
                 return new List<string> { response.identifier };
             }
@@ -37,7 +35,7 @@ namespace Unity.Services.Analytics
         {
             m_CoreStatsHelper.SetCoreStatsConsent(consent);
 
-            if (!ConsentTracker.IsGeoIpChecked())
+            if (!m_ConsentTracker.IsGeoIpChecked())
             {
                 throw new ConsentCheckException(ConsentCheckExceptionReason.ConsentFlowNotKnown,
                     CommonErrorCodes.Unknown,
@@ -47,9 +45,9 @@ namespace Unity.Services.Analytics
 
             if (consent == false)
             {
-                if (ConsentTracker.IsConsentGiven(identifier))
+                if (m_ConsentTracker.IsConsentGiven(identifier))
                 {
-                    ConsentTracker.BeginOptOutProcess(identifier);
+                    m_ConsentTracker.BeginOptOutProcess(identifier);
                     RevokeWithForgetEvent();
                     return;
                 }
@@ -57,65 +55,55 @@ namespace Unity.Services.Analytics
                 Revoke();
             }
 
-            ConsentTracker.SetUserConsentStatus(identifier, consent);
+            m_ConsentTracker.SetUserConsentStatus(identifier, consent);
         }
 
         public void OptOut()
         {
-            Debug.Log(ConsentTracker.IsConsentDenied()
+            Debug.Log(m_ConsentTracker.IsConsentDenied()
                 ? "This user has opted out. Any cached events have been discarded and no more will be collected."
                 : "This user has opted out and is in the process of being forgotten...");
 
-            if (ConsentTracker.IsConsentGiven())
+            if (m_ConsentTracker.IsConsentGiven())
             {
                 // We have revoked consent but have not yet sent the ForgetMe signal
                 // Thus we need to keep some of the dispatcher alive until that is done
-                ConsentTracker.BeginOptOutProcess();
+                m_ConsentTracker.BeginOptOutProcess();
                 RevokeWithForgetEvent();
 
                 return;
             }
 
-            if (ConsentTracker.IsOptingOutInProgress())
+            if (m_ConsentTracker.IsOptingOutInProgress())
             {
                 RevokeWithForgetEvent();
                 return;
             }
 
             Revoke();
-            ConsentTracker.SetDenyConsentToAll();
+            m_ConsentTracker.SetDenyConsentToAll();
             m_CoreStatsHelper.SetCoreStatsConsent(false);
         }
 
         void Revoke()
         {
             // We have already been forgotten and so do not need to send the ForgetMe signal
-            dataBuffer.ClearDiskCache();
-            dataBuffer = new BufferRevoked();
-            dataDispatcher = new Dispatcher(dataBuffer, new WebRequestHelper());
+            SwapToRevokedBuffer();
+
             AnalyticsContainer.DestroyContainer();
         }
 
         internal void RevokeWithForgetEvent()
         {
-            // Clear everything out of the real buffer and replace it with a dummy
-            // that will swallow all events and do nothing
-            dataBuffer.ClearBuffer();
-            dataBuffer = new BufferRevoked();
-            dataDispatcher = new Dispatcher(dataBuffer, new WebRequestHelper());
+            SwapToRevokedBuffer();
 
-            analyticsForgetter = new AnalyticsForgetter(m_CollectURL,
-                InstallId.GetOrCreateIdentifier(),
-                Internal.Buffer.SaveDateTime(DateTime.Now),
-                k_ForgetCallingId,
-                ForgetMeEventUploaded, ConsentTracker);
-            analyticsForgetter.AttemptToForget();
+            m_AnalyticsForgetter.AttemptToForget(k_ForgetCallingId, m_CollectURL, m_InstallId.GetOrCreateIdentifier(), BufferX.SerializeDateTime(DateTime.Now), ForgetMeEventUploaded);
         }
 
         internal void ForgetMeEventUploaded()
         {
             AnalyticsContainer.DestroyContainer();
-            ConsentTracker.FinishOptOutProcess();
+            m_ConsentTracker.FinishOptOutProcess();
 
 #if UNITY_ANALYTICS_EVENT_LOGS
             Debug.Log("User opted out successfully and has been forgotten!");

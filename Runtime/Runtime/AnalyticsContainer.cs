@@ -5,14 +5,9 @@ namespace Unity.Services.Analytics
 {
     internal class AnalyticsContainer : MonoBehaviour
     {
-#if UNITY_WEBGL
-        // Heartbeat more frequently on WebGL to reduce the performance impact of serialisation during batching for upload.
-        const float k_HeartbeatPeriod = 20.0f;
-        const float k_GameRunningPeriod = 60.0f;
-#else
         const float k_HeartbeatPeriod = 60.0f;
         const float k_GameRunningPeriod = 60.0f;
-#endif
+
         static bool s_Created;
         static GameObject s_Container;
 
@@ -62,6 +57,11 @@ namespace Unity.Services.Analytics
                 AnalyticsService.internalInstance.InternalTick();
                 m_HeartbeatTime = 0.0f;
             }
+        }
+
+        private void OnApplicationPause(bool paused)
+        {
+            AnalyticsService.internalInstance.ApplicationPaused(paused);
         }
 
         internal static void DestroyContainer()

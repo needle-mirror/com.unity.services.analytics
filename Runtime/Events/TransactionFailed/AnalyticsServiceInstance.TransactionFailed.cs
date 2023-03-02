@@ -32,7 +32,7 @@ namespace Unity.Services.Analytics
                 parameters.PaymentCountry = Internal.Platform.UserCountry.Name();
             }
 
-            dataGenerator.TransactionFailed(ref dataBuffer, DateTime.Now, m_CommonParams, "com.unity.services.analytics.events.TransactionFailed", parameters);
+            m_DataGenerator.TransactionFailed(DateTime.Now, m_CommonParams, "com.unity.services.analytics.events.TransactionFailed", parameters);
         }
     }
 }

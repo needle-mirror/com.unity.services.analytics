@@ -37,7 +37,7 @@ namespace Unity.Services.Analytics
                 Debug.LogError("Required to have a value for provider");
             }
 
-            dataGenerator.AcquisitionSource(ref dataBuffer, DateTime.Now, m_CommonParams,
+            m_DataGenerator.AcquisitionSource(DateTime.Now, m_CommonParams,
                 "com.unity.services.analytics.events.acquisitionSource", acquisitionSourceParameters);
         }
     }

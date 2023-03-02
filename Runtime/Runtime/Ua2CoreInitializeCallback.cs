@@ -1,7 +1,9 @@
-using System;
 using System.Threading.Tasks;
 using Unity.Services.Analytics;
+using Unity.Services.Analytics.Data;
+using Unity.Services.Analytics.Internal;
 using Unity.Services.Authentication.Internal;
+using Unity.Services.Core.Analytics.Internal;
 using Unity.Services.Core.Configuration.Internal;
 using Unity.Services.Core.Device.Internal;
 using Unity.Services.Core.Environments.Internal;
@@ -17,8 +19,10 @@ class Ua2CoreInitializeCallback : IInitializablePackage
             .DependsOn<IInstallationId>()
             .DependsOn<ICloudProjectId>()
             .DependsOn<IEnvironments>()
+            .DependsOn<IExternalUserId>()
             .DependsOn<IProjectConfiguration>()
-            .OptionallyDependsOn<IPlayerId>();
+            .OptionallyDependsOn<IPlayerId>()
+            .ProvidesComponent<IAnalyticsStandardEventComponent>();
     }
 
     public async Task Initialize(CoreRegistry registry)
@@ -27,22 +31,46 @@ class Ua2CoreInitializeCallback : IInitializablePackage
         var installationId = registry.GetServiceComponent<IInstallationId>();
         var playerId = registry.GetServiceComponent<IPlayerId>();
         var environments = registry.GetServiceComponent<IEnvironments>();
-        var projectConfiguration = registry.GetServiceComponent<IProjectConfiguration>();
+        var customUserId = registry.GetServiceComponent<IExternalUserId>();
 
-        var analyticsUserId = projectConfiguration.GetString("com.unity.services.core.analytics-user-id");
+        var coreStatsHelper = new CoreStatsHelper();
+        var consentTracker = new ConsentTracker(coreStatsHelper);
 
-        AnalyticsService.internalInstance = new AnalyticsServiceInstance();
-        await AnalyticsService.internalInstance.Initialize(cloudProjectId, installationId, playerId, environments.Current, analyticsUserId);
+        var buffer = new BufferX(new BufferSystemCalls(), new DiskCache(new FileSystemCalls()));
+
+        AnalyticsService.internalInstance = new AnalyticsServiceInstance(
+            new DataGenerator(),
+            buffer,
+            new BufferRevoked(),
+            coreStatsHelper,
+            consentTracker,
+            new Dispatcher(new WebRequestHelper(), consentTracker),
+            new AnalyticsForgetter(consentTracker),
+            cloudProjectId,
+            installationId,
+            playerId,
+            environments.Current,
+            customUserId,
+            new AnalyticsServiceSystemCalls());
+
+        StandardEventServiceComponent standardEventComponent = new StandardEventServiceComponent(
+            registry.GetServiceComponent<IProjectConfiguration>(),
+            AnalyticsService.internalInstance);
+        registry.RegisterServiceComponent<IAnalyticsStandardEventComponent>(standardEventComponent);
+
+        buffer.LoadFromDisk();
+
+        await AnalyticsService.internalInstance.Initialize();
 
 #if UNITY_ANALYTICS_DEVELOPMENT
         Debug.LogFormat("Core Initialize Callback\nInstall ID: {0}\nPlayer ID: {1}\nCustom Analytics ID: {2}",
             installationId.GetOrCreateIdentifier(),
             playerId?.PlayerId,
-            analyticsUserId
+            customUserId.UserId
         );
 #endif
 
-        if (AnalyticsService.internalInstance.ConsentTracker.IsGeoIpChecked())
+        if (consentTracker.IsGeoIpChecked())
         {
             AnalyticsService.internalInstance.Flush();
         }

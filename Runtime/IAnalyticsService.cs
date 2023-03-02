@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Unity.Services.Analytics.Internal;
@@ -92,6 +93,7 @@ namespace Unity.Services.Analytics
         /// you should use the <c>CustomData</c> method instead.
         /// </summary>
         /// <param name="eventToRecord">Internal event to record</param>
+        [Obsolete("This mechanism is no longer supported and will be removed in a future version. Use the new Core IAnalyticsStandardEventComponent API instead.")]
         void RecordInternalEvent(Event eventToRecord);
 
         /// <summary>

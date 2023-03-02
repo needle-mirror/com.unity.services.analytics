@@ -7,109 +7,97 @@ namespace Unity.Services.Analytics.Internal
 {
     interface IDispatcher
     {
+        void SetBuffer(IBuffer buffer);
         string CollectUrl { get; set; }
-        Task Flush();
+        void Flush();
     }
 
     class Dispatcher : IDispatcher
     {
-        readonly IBuffer m_DataBuffer;
         readonly IWebRequestHelper m_WebRequestHelper;
+        readonly IConsentTracker m_ConsentTracker;
+
+        IBuffer m_DataBuffer;
+        IWebRequest m_FlushRequest;
 
         internal bool FlushInProgress { get; private set; }
-        IWebRequest m_FlushRequest;
-        List<Buffer.Token> m_FlushPayload;
+
+        private int m_FlushBufferIndex;
 
         public string CollectUrl { get; set; }
 
-        IConsentTracker ConsentTracker { get; }
-
-        public Dispatcher(IBuffer buffer, IWebRequestHelper webRequestHelper, IConsentTracker consentTracker = null)
+        public Dispatcher(IWebRequestHelper webRequestHelper, IConsentTracker consentTracker)
         {
-            m_DataBuffer = buffer;
             m_WebRequestHelper = webRequestHelper;
-            ConsentTracker = consentTracker;
+            m_ConsentTracker = consentTracker;
         }
 
-        public async Task Flush()
+        public void SetBuffer(IBuffer buffer)
+        {
+            m_DataBuffer = buffer;
+        }
+
+        public void Flush()
         {
             if (FlushInProgress)
             {
                 Debug.LogWarning("Analytics Dispatcher is already flushing.");
-                return;
             }
-
-            // Also, check if the consent was definitely checked and given at this point.
-            if (!ConsentTracker.IsGeoIpChecked() || !ConsentTracker.IsConsentGiven())
+            else if (!m_ConsentTracker.IsGeoIpChecked() || !m_ConsentTracker.IsConsentGiven())
             {
+                // Also, check if the consent was definitely checked and given at this point.
                 Debug.LogWarning("Required consent wasn't checked and given when trying to dispatch events, the events cannot be sent.");
-                return;
             }
-
-            FlushInProgress = true;
-
-            await FlushBufferToService();
+            else
+            {
+                FlushBufferToService();
+            }
         }
 
-        async Task FlushBufferToService()
+        void FlushBufferToService()
         {
-            // Serialize it into a JSON Blob, then POST it to the Collect bulk URL.
-            // 'Bulk Events' -> https://docs.deltadna.com/advanced-integration/rest-api/
+            FlushInProgress = true;
 
-            var tokens = m_DataBuffer.CloneTokens();
-
-#if UNITY_WEBGL
-            // NOTE: we are maintaining the async/Task format, even though this is now synchronous,
-            // to minimise the fallout of this platform-specific path. If we made it fully synchronous all
-            // the way up, we would have to change several method signatures too, which could be Breaking.
-            var task = Task.FromResult(m_DataBuffer.Serialize(tokens));
-#else
-            var task = Task.Factory.StartNew(() => m_DataBuffer.Serialize(tokens));
-#endif
-            var postBytes = await task;
+            var postBytes = m_DataBuffer.Serialize();
+            m_FlushBufferIndex = m_DataBuffer.Length;
 
             if (postBytes == null || postBytes.Length == 0)
             {
                 FlushInProgress = false;
-                m_FlushPayload = null;
-                return;
+                m_FlushBufferIndex = 0;
             }
-
-            m_FlushRequest = m_WebRequestHelper.CreateWebRequest(CollectUrl, UnityWebRequest.kHttpVerbPOST, postBytes);
-
-            if (ConsentTracker.IsGeoIpChecked() && ConsentTracker.IsConsentGiven())
+            else
             {
-                foreach (var header in ConsentTracker.requiredHeaders)
+                m_FlushRequest = m_WebRequestHelper.CreateWebRequest(CollectUrl, UnityWebRequest.kHttpVerbPOST, postBytes);
+
+                if (m_ConsentTracker.IsGeoIpChecked() && m_ConsentTracker.IsConsentGiven())
                 {
-                    m_FlushRequest.SetRequestHeader(header.Key, header.Value);
+                    foreach (var header in m_ConsentTracker.requiredHeaders)
+                    {
+                        m_FlushRequest.SetRequestHeader(header.Key, header.Value);
+                    }
                 }
-            }
 
-            m_FlushPayload = tokens;
-
-            m_WebRequestHelper.SendWebRequest(m_FlushRequest, UploadCompleted);
+                m_WebRequestHelper.SendWebRequest(m_FlushRequest, UploadCompleted);
 
 #if UNITY_ANALYTICS_EVENT_LOGS
-            Debug.Log("Uploading events...");
+                Debug.Log("Uploading events...");
 #endif
+            }
         }
 
         void UploadCompleted(long responseCode)
         {
-            // Callback
-            // If the result is successful we will remove the request.
-            // else if there was a failure, we insert the tokens back into the buffer.
-
             if (!m_FlushRequest.isNetworkError &&
                 (responseCode == 204 || responseCode == 400))
             {
                 // If we get a 400 response code, the JSON is malformed which means we have a bad event somewhere
-                // in the queue. In this case, our only recourse is to discard the tokens. If they were
-                // to be reinserted into the queue, the bad event would recur forever and no more data would ever
-                // by uploaded.
+                // in the queue. In this case, our only recourse is to clear the buffer and discard all events. If bad
+                // events were left in the queue, they would recur forever and no more data would ever be uploaded.
                 // So, slightly counter-intuitively, our actions on getting a success 204 and an error 400 are actually the same.
                 // Other errors are likely transient and should not result in clearance of the buffer.
 
+                m_DataBuffer.ClearBuffer(m_FlushBufferIndex);
                 m_DataBuffer.ClearDiskCache();
 
 #if UNITY_ANALYTICS_EVENT_LOGS
@@ -125,8 +113,7 @@ namespace Unity.Services.Analytics.Internal
             }
             else
             {
-                // Reinsert the tokens back into the buffer.
-                m_DataBuffer.InsertTokens(m_FlushPayload);
+                // Flush to disk in case we end up exiting before connectivity is re-established.
                 m_DataBuffer.FlushToDisk();
 
 #if UNITY_ANALYTICS_EVENT_LOGS
@@ -143,7 +130,7 @@ namespace Unity.Services.Analytics.Internal
 
             // Clear the request now that we are done.
             FlushInProgress = false;
-            m_FlushPayload = null;
+            m_FlushBufferIndex = 0;
             m_FlushRequest.Dispose();
             m_FlushRequest = null;
         }
