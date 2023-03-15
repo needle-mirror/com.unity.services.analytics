@@ -16,6 +16,14 @@ namespace Unity.Services.Analytics.Internal
         DateTime Now();
     }
 
+    internal interface IBufferIds
+    {
+        string UserId { get; }
+        string InstallId { get; }
+        string PlayerId { get; }
+        string SessionId { get; }
+    }
+
     class BufferSystemCalls : IBufferSystemCalls
     {
         public string GenerateGuid()
@@ -45,16 +53,12 @@ namespace Unity.Services.Analytics.Internal
         const string k_MillisecondDateFormat = "yyyy-MM-dd HH:mm:ss.fff zzz";
         readonly IBufferSystemCalls m_SystemCalls;
         readonly IDiskCache m_DiskCache;
+        IBufferIds m_Ids;
 
         readonly List<int> m_EventEnds;
 
         MemoryStream m_SpareBuffer;
         MemoryStream m_Buffer;
-
-        public string UserID { get; set; }
-        public string InstallID { get; set; }
-        public string PlayerID { get; set; }
-        public string SessionID { get; set; }
 
         public int Length { get { return (int)m_Buffer.Length; } }
 
@@ -86,6 +90,14 @@ namespace Unity.Services.Analytics.Internal
             ClearBuffer();
         }
 
+        /// <summary>
+        /// For wrangling, IDs are managed by the AnalyticsServiceInstance but the Buffer shouldn't know this.
+        /// </summary>
+        public void InjectIds(IBufferIds ids)
+        {
+            m_Ids = ids;
+        }
+
         private void WriteString(string value)
         {
             var bytes = Encoding.UTF8.GetBytes(value);
@@ -105,10 +117,10 @@ namespace Unity.Services.Analytics.Internal
             WriteString(name);
             WriteString("\",");
             WriteString("\"userID\":\"");
-            WriteString(UserID);
+            WriteString(m_Ids.UserId);
             WriteString("\",");
             WriteString("\"sessionID\":\"");
-            WriteString(SessionID);
+            WriteString(m_Ids.SessionId);
             WriteString("\",");
             WriteString("\"eventUUID\":\"");
             WriteString(m_SystemCalls.GenerateGuid());
@@ -128,13 +140,13 @@ namespace Unity.Services.Analytics.Internal
             if (addPlayerIdsToEventBody)
             {
                 WriteString("\"unityInstallationID\":\"");
-                WriteString(InstallID);
+                WriteString(m_Ids.InstallId);
                 WriteString("\",");
 
-                if (!String.IsNullOrEmpty(PlayerID))
+                if (!String.IsNullOrEmpty(m_Ids.PlayerId))
                 {
                     WriteString("\"unityPlayerID\":\"");
-                    WriteString(PlayerID);
+                    WriteString(m_Ids.PlayerId);
                     WriteString("\",");
                 }
             }

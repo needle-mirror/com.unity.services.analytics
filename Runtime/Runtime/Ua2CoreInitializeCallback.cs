@@ -52,6 +52,7 @@ class Ua2CoreInitializeCallback : IInitializablePackage
             environments.Current,
             customUserId,
             new AnalyticsServiceSystemCalls());
+        buffer.InjectIds(AnalyticsService.internalInstance);
 
         StandardEventServiceComponent standardEventComponent = new StandardEventServiceComponent(
             registry.GetServiceComponent<IProjectConfiguration>(),

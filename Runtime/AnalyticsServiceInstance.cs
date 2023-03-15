@@ -36,7 +36,7 @@ namespace Unity.Services.Analytics
             string callingMethodIdentifier);
     }
 
-    partial class AnalyticsServiceInstance : IAnalyticsService, IUnstructuredEventRecorder
+    partial class AnalyticsServiceInstance : IAnalyticsService, IUnstructuredEventRecorder, IBufferIds
     {
         public string PrivacyUrl => "https://unity3d.com/legal/privacy-policy";
 
@@ -70,6 +70,11 @@ namespace Unity.Services.Analytics
 
         int m_BufferLengthAtLastGameRunning;
         DateTime m_ApplicationPauseTime;
+
+        public string UserId { get { return GetAnalyticsUserID(); } }
+        public string InstallId { get { return m_InstallId.GetOrCreateIdentifier(); } }
+        public string PlayerId { get { return m_PlayerId?.PlayerId; } }
+        public string SessionId { get { return SessionID; } }
 
         internal AnalyticsServiceInstance(IDataGenerator dataGenerator,
                                           IBuffer realBuffer,
@@ -117,9 +122,6 @@ namespace Unity.Services.Analytics
             string projectId = cloudProjectId?.GetCloudProjectId() ?? Application.cloudProjectId;
             m_CommonParams.ProjectID = projectId;
             m_CollectURL = String.Format(k_CollectUrlPattern, projectId, environment.ToLowerInvariant());
-
-            m_DataBuffer.UserID = GetAnalyticsUserID();
-            m_DataBuffer.InstallID = m_InstallId.GetOrCreateIdentifier();
 
             RefreshSessionID();
 
@@ -217,7 +219,6 @@ namespace Unity.Services.Analytics
         internal void RefreshSessionID()
         {
             SessionID = Guid.NewGuid().ToString();
-            m_DataBuffer.SessionID = SessionID;
 
 #if UNITY_ANALYTICS_DEVELOPMENT
             Debug.Log("Analytics SDK started new session: " + SessionID);
@@ -233,11 +234,6 @@ namespace Unity.Services.Analytics
 
             if (m_ConsentTracker.IsGeoIpChecked() && m_ConsentTracker.IsConsentGiven())
             {
-                m_DataBuffer.InstallID = m_InstallId.GetOrCreateIdentifier();
-                m_DataBuffer.PlayerID = m_PlayerId?.PlayerId;
-                m_DataBuffer.UserID = GetAnalyticsUserID();
-                m_DataBuffer.SessionID = SessionID;
-
                 m_DataDispatcher.CollectUrl = m_CollectURL;
                 m_DataDispatcher.Flush();
             }

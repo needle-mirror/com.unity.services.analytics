@@ -11,10 +11,6 @@ namespace Unity.Services.Analytics.Internal
 {
     interface IBuffer
     {
-        string UserID { get; set; }
-        string InstallID { get; set; }
-        string PlayerID { get; set; }
-        string SessionID { get; set; }
         int Length { get; }
         byte[] Serialize();
         void PushStartEvent(string name, DateTime datetime, Int64? eventVersion, bool addPlayerIdsToEventBody = false);
