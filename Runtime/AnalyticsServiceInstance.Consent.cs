@@ -97,7 +97,7 @@ namespace Unity.Services.Analytics
         {
             SwapToRevokedBuffer();
 
-            m_AnalyticsForgetter.AttemptToForget(k_ForgetCallingId, m_CollectURL, m_InstallId.GetOrCreateIdentifier(), BufferX.SerializeDateTime(DateTime.Now), ForgetMeEventUploaded);
+            m_AnalyticsForgetter.AttemptToForget(m_CollectURL, m_InstallId.GetOrCreateIdentifier(), BufferX.SerializeDateTime(DateTime.Now), k_ForgetCallingId, ForgetMeEventUploaded);
         }
 
         internal void ForgetMeEventUploaded()

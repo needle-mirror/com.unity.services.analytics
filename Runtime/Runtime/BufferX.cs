@@ -1,11 +1,8 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using System.Runtime.InteropServices.ComTypes;
 using System.Text;
-using Newtonsoft.Json;
 using UnityEngine;
 
 namespace Unity.Services.Analytics.Internal
@@ -47,10 +44,39 @@ namespace Unity.Services.Analytics.Internal
         // The Collect endpoint can actually accept payloads of up to 5MB (at time of writing, Jan 2023),
         // but we want to retain some headroom... just in case.
         const long k_UploadBatchMaximumSizeInBytes = 4 * 1024 * 1024;
-        const string k_BufferHeader = "{\"eventList\":[";
-
         const string k_SecondDateFormat = "yyyy-MM-dd HH:mm:ss zzz";
         const string k_MillisecondDateFormat = "yyyy-MM-dd HH:mm:ss.fff zzz";
+
+        readonly byte[] k_WorkingBuffer;
+        readonly char[] k_WorkingCharacterBuffer;
+
+        readonly byte[] k_BufferHeader;
+
+        readonly byte[] k_HeaderEventName;
+        readonly byte[] k_HeaderUserName;
+        readonly byte[] k_HeaderSessionID;
+        readonly byte[] k_HeaderEventUUID;
+        readonly byte[] k_HeaderTimestamp;
+
+        readonly byte[] k_HeaderEventVersion;
+        readonly byte[] k_HeaderInstallationID;
+        readonly byte[] k_HeaderPlayerID;
+
+        readonly byte[] k_HeaderOpenEventParams;
+        readonly byte[] k_CloseEvent;
+
+        readonly byte k_Quote;
+        readonly byte[] k_QuoteColon;
+        readonly byte[] k_QuoteComma;
+        readonly byte[] k_Comma;
+        readonly byte[] k_OpenBrace;
+        readonly byte[] k_CloseBraceComma;
+        readonly byte[] k_OpenBracket;
+        readonly byte[] k_CloseBracketComma;
+
+        readonly byte[] k_True;
+        readonly byte[] k_False;
+
         readonly IBufferSystemCalls m_SystemCalls;
         readonly IDiskCache m_DiskCache;
         IBufferIds m_Ids;
@@ -80,12 +106,48 @@ namespace Unity.Services.Analytics.Internal
 
         public BufferX(IBufferSystemCalls eventIdGenerator, IDiskCache diskCache)
         {
-            m_Buffer = new MemoryStream();
-            m_SpareBuffer = new MemoryStream();
+            m_Buffer = new MemoryStream((int)k_UploadBatchMaximumSizeInBytes);
+            m_SpareBuffer = new MemoryStream((int)k_UploadBatchMaximumSizeInBytes);
             m_EventEnds = new List<int>();
 
             m_SystemCalls = eventIdGenerator;
             m_DiskCache = diskCache;
+
+            // Transaction receipts can be over 1MB in size, so we really do need working buffers that are this large.
+            // Since a single event exceeding the maximum batch size would be eliminated from the buffer, a single
+            // string parameter within that event should also never reach that size, so this should be a safe limit.
+            k_WorkingBuffer = new byte[k_UploadBatchMaximumSizeInBytes];
+            k_WorkingCharacterBuffer = new char[k_UploadBatchMaximumSizeInBytes];
+
+            k_BufferHeader = Encoding.UTF8.GetBytes("{\"eventList\":[");
+
+            k_HeaderEventName = Encoding.UTF8.GetBytes("{\"eventName\":\"");
+            k_HeaderUserName = Encoding.UTF8.GetBytes("\",\"userID\":\"");
+            k_HeaderSessionID = Encoding.UTF8.GetBytes("\",\"sessionID\":\"");
+            k_HeaderEventUUID = Encoding.UTF8.GetBytes("\",\"eventUUID\":\"");
+            k_HeaderTimestamp = Encoding.UTF8.GetBytes("\",\"eventTimestamp\":\"");
+
+            k_HeaderEventVersion = Encoding.UTF8.GetBytes("\"eventVersion\":");
+            k_HeaderInstallationID = Encoding.UTF8.GetBytes("\"unityInstallationID\":\"");
+            k_HeaderPlayerID = Encoding.UTF8.GetBytes("\"unityPlayerID\":\"");
+
+            k_HeaderOpenEventParams = Encoding.UTF8.GetBytes("\"eventParams\":{");
+
+            // Close params block, close event object, comma to prepare for next event
+            k_CloseEvent = Encoding.UTF8.GetBytes("}},");
+
+            k_Quote = Encoding.UTF8.GetBytes("\"")[0];
+            k_QuoteColon = Encoding.UTF8.GetBytes("\":");
+            k_QuoteComma = Encoding.UTF8.GetBytes("\",");
+            k_Comma = Encoding.UTF8.GetBytes(",");
+
+            k_OpenBrace = Encoding.UTF8.GetBytes("{");
+            k_CloseBraceComma = Encoding.UTF8.GetBytes("},");
+            k_OpenBracket = Encoding.UTF8.GetBytes("[");
+            k_CloseBracketComma = Encoding.UTF8.GetBytes("],");
+
+            k_True = Encoding.UTF8.GetBytes("true");
+            k_False = Encoding.UTF8.GetBytes("false");
 
             ClearBuffer();
         }
@@ -98,12 +160,29 @@ namespace Unity.Services.Analytics.Internal
             m_Ids = ids;
         }
 
-        private void WriteString(string value)
+        private void WriteString(in string value)
         {
-            var bytes = Encoding.UTF8.GetBytes(value);
-            for (var i = 0; i < bytes.Length; i++)
+            int length = Encoding.UTF8.GetBytes(value, 0, Mathf.Min(value.Length, k_WorkingBuffer.Length), k_WorkingBuffer, 0);
+            m_Buffer.Write(k_WorkingBuffer, 0, length);
+        }
+
+        private void WriteByte(in byte value)
+        {
+            m_Buffer.WriteByte(value);
+        }
+
+        private void WriteBytes(in byte[] bytes)
+        {
+            m_Buffer.Write(bytes, 0, bytes.Length);
+        }
+
+        private void WriteName(string name)
+        {
+            if (name != null)
             {
-                m_Buffer.WriteByte(bytes[i]);
+                WriteByte(k_Quote);
+                WriteString(name);
+                WriteBytes(k_QuoteColon);
             }
         }
 
@@ -112,46 +191,40 @@ namespace Unity.Services.Analytics.Internal
 #if UNITY_ANALYTICS_EVENT_LOGS
             Debug.LogFormat("Recording event {0} at {1} (UTC)...", name, SerializeDateTime(datetime));
 #endif
-            WriteString("{");
-            WriteString("\"eventName\":\"");
+            WriteBytes(k_HeaderEventName);
             WriteString(name);
-            WriteString("\",");
-            WriteString("\"userID\":\"");
+            WriteBytes(k_HeaderUserName);
             WriteString(m_Ids.UserId);
-            WriteString("\",");
-            WriteString("\"sessionID\":\"");
+            WriteBytes(k_HeaderSessionID);
             WriteString(m_Ids.SessionId);
-            WriteString("\",");
-            WriteString("\"eventUUID\":\"");
+            WriteBytes(k_HeaderEventUUID);
             WriteString(m_SystemCalls.GenerateGuid());
-            WriteString("\",");
-
-            WriteString("\"eventTimestamp\":\"");
+            WriteBytes(k_HeaderTimestamp);
             WriteString(SerializeDateTime(datetime));
-            WriteString("\",");
+            WriteBytes(k_QuoteComma);
 
             if (eventVersion != null)
             {
-                WriteString("\"eventVersion\":");
+                WriteBytes(k_HeaderEventVersion);
                 WriteString(eventVersion.ToString());
-                WriteString(",");
+                WriteBytes(k_Comma);
             }
 
             if (addPlayerIdsToEventBody)
             {
-                WriteString("\"unityInstallationID\":\"");
+                WriteBytes(k_HeaderInstallationID);
                 WriteString(m_Ids.InstallId);
-                WriteString("\",");
+                WriteBytes(k_QuoteComma);
 
                 if (!String.IsNullOrEmpty(m_Ids.PlayerId))
                 {
-                    WriteString("\"unityPlayerID\":\"");
+                    WriteBytes(k_HeaderPlayerID);
                     WriteString(m_Ids.PlayerId);
-                    WriteString("\",");
+                    WriteBytes(k_QuoteComma);
                 }
             }
 
-            WriteString("\"eventParams\":{");
+            WriteBytes(k_HeaderOpenEventParams);
         }
 
         private void StripTrailingCommaIfNecessary()
@@ -175,8 +248,7 @@ namespace Unity.Services.Analytics.Internal
         {
             StripTrailingCommaIfNecessary();
 
-            // Close params block, close event object, comma to prepare for next item
-            WriteString("}},");
+            WriteBytes(k_CloseEvent);
 
             int bufferLength = (int)m_Buffer.Length;
 
@@ -204,91 +276,118 @@ namespace Unity.Services.Analytics.Internal
 
         public void PushObjectStart(string name = null)
         {
-            if (name != null)
-            {
-                WriteString("\"");
-                WriteString(name);
-                WriteString("\":");
-            }
-            WriteString("{");
+            WriteName(name);
+            WriteBytes(k_OpenBrace);
         }
 
         public void PushObjectEnd()
         {
             StripTrailingCommaIfNecessary();
-
-            WriteString("},");
+            WriteBytes(k_CloseBraceComma);
         }
 
         public void PushArrayStart(string name)
         {
-            WriteString("\"");
-            WriteString(name);
-            WriteString("\":");
-            WriteString("[");
+            WriteName(name);
+            WriteBytes(k_OpenBracket);
         }
 
         public void PushArrayEnd()
         {
             StripTrailingCommaIfNecessary();
 
-            WriteString("],");
+            WriteBytes(k_CloseBracketComma);
         }
 
         public void PushDouble(double val, string name = null)
         {
-            if (name != null)
-            {
-                WriteString("\"");
-                WriteString(name);
-                WriteString("\":");
-            }
+            WriteName(name);
             var formatted = val.ToString(CultureInfo.InvariantCulture);
             WriteString(formatted);
-            WriteString(",");
+            WriteBytes(k_Comma);
         }
 
         public void PushFloat(float val, string name = null)
         {
-            if (name != null)
-            {
-                WriteString("\"");
-                WriteString(name);
-                WriteString("\":");
-            }
+            WriteName(name);
             var formatted = val.ToString(CultureInfo.InvariantCulture);
             WriteString(formatted);
-            WriteString(",");
+            WriteBytes(k_Comma);
         }
 
-        public void PushString(string val, string name = null)
+        public void PushString(string value, string name = null)
         {
 #if UNITY_ANALYTICS_DEVELOPMENT
-            Debug.AssertFormat(!String.IsNullOrEmpty(val), "Required to have a value");
+            Debug.AssertFormat(!String.IsNullOrEmpty(value), "Required to have a value");
 #endif
-            if (name != null)
+            if (Encoding.UTF8.GetByteCount(value) < k_WorkingBuffer.Length)
             {
-                WriteString("\"");
-                WriteString(name);
-                WriteString("\":");
-            }
+                int c = 0;
+                for (int i = 0; i < value.Length; i++)
+                {
+                    char character = value[i];
+                    // Newline, etc.
+                    if (Char.IsControl(character))
+                    {
+                        // Converting to e.g. \U000A rather than \n is not normal, but it is valid JSON.
+                        // This gives us a reliable way to escape any control character.
+                        // We will allocate a small string here to generate the control code, but it
+                        // should be relatively rare (i.e. only if a control char is even present).
+                        int codepoint = Convert.ToInt32(character);
+                        string control = $"\\U{codepoint:X4}";
+                        for (int j = 0; j < control.Length; j++)
+                        {
+                            k_WorkingCharacterBuffer[c] = control[j];
+                            c++;
+                        }
+                    }
+                    // JSON structural characters, quote and slash.
+                    else if (character == '"' || character == '\\')
+                    {
+                        k_WorkingCharacterBuffer[c] = '\\';
+                        k_WorkingCharacterBuffer[c + 1] = character;
+                        c += 2;
+                    }
+                    // Normal text
+                    else
+                    {
+                        k_WorkingCharacterBuffer[c] = value[i];
+                        c++;
+                    }
 
-            // TODO: JsonConvert here is necessary to ensure strings don't break the JSON we are producing,
-            // BUT it is also a major performance hotspot. Can we escape embedded JSON in a better way?
-            WriteString(JsonConvert.ToString(val));
-            WriteString(",");
+                    if (c >= k_WorkingCharacterBuffer.Length)
+                    {
+                        // If working index has tripped over the escaped buffer length, then adding the extra escape codes
+                        // has made this value too big to process. We will no longer accept this value.
+                        // Truncate the string so it doesn't obliterate your log file.
+                        Debug.LogWarning($"String value for field {name} is too long, it will not be recorded.\nValue:\n{value.Substring(0, 128)}...");
+                        break;
+                    }
+                }
+
+                if (c < k_WorkingCharacterBuffer.Length)
+                {
+                    WriteName(name);
+                    WriteByte(k_Quote);
+
+                    int valueLength = Encoding.UTF8.GetBytes(k_WorkingCharacterBuffer, 0, c, k_WorkingBuffer, 0);
+                    m_Buffer.Write(k_WorkingBuffer, 0, valueLength);
+
+                    WriteBytes(k_QuoteComma);
+                }
+            }
+            else
+            {
+                // Truncate the string so it doesn't obliterate your log file.
+                Debug.LogWarning($"String value for field \"{name}\" is too long, it will not be recorded.\nValue:\n{value.Substring(0, 128)}...");
+            }
         }
 
         public void PushInt64(long val, string name = null)
         {
-            if (name != null)
-            {
-                WriteString("\"");
-                WriteString(name);
-                WriteString("\":");
-            }
+            WriteName(name);
             WriteString(val.ToString());
-            WriteString(",");
+            WriteBytes(k_Comma);
         }
 
         public void PushInt(int val, string name = null)
@@ -298,23 +397,24 @@ namespace Unity.Services.Analytics.Internal
 
         public void PushBool(bool val, string name = null)
         {
-            if (name != null)
+            WriteName(name);
+            if (val)
             {
-                WriteString("\"");
-                WriteString(name);
-                WriteString("\":");
+                WriteBytes(k_True);
             }
-            WriteString(val ? "true" : "false");
-            WriteString(",");
+            else
+            {
+                WriteBytes(k_False);
+            }
+            WriteBytes(k_Comma);
         }
 
         public void PushTimestamp(DateTime val, string name)
         {
-            WriteString("\"");
-            WriteString(name);
-            WriteString("\":\"");
+            WriteName(name);
+            WriteByte(k_Quote);
             WriteString(SerializeDateTime(val));
-            WriteString("\",");
+            WriteBytes(k_QuoteComma);
         }
 
         [Obsolete("This mechanism is no longer supported and will be removed in a future version. Use the new Core IAnalyticsStandardEventComponent API instead.")]
@@ -403,7 +503,7 @@ namespace Unity.Services.Analytics.Internal
         {
             m_Buffer.SetLength(0);
             m_Buffer.Position = 0;
-            WriteString(k_BufferHeader);
+            WriteBytes(k_BufferHeader);
 
             m_EventEnds.Clear();
         }
@@ -431,7 +531,7 @@ namespace Unity.Services.Analytics.Internal
             // Reset the buffer back to a blank state...
             m_Buffer.SetLength(0);
             m_Buffer.Position = 0;
-            WriteString(k_BufferHeader);
+            WriteBytes(k_BufferHeader);
 
             // ... and copy over anything that came after the cut-off point.
             m_SpareBuffer.Position = upTo;
