@@ -23,7 +23,7 @@ namespace Unity.Services.Analytics
             bool includePlayerIds,
             string callingMethodIdentifier)
         {
-            if (ServiceEnabled)
+            if (m_IsActive)
             {
                 m_DataBuffer.PushStartEvent(eventName, DateTime.Now, eventVersion, includePlayerIds);
                 if (includeCommonParams) // i.e. this is a Standard Event
@@ -41,6 +41,12 @@ namespace Unity.Services.Analytics
 
                 m_DataBuffer.PushEndEvent();
             }
+#if UNITY_ANALYTICS_EVENT_LOGS
+            else
+            {
+                Debug.Log("Did not record custom event " + eventName + " because player has not opted in.");
+            }
+#endif
         }
 
         private void SerializeObject(string eventName, string key, object value)

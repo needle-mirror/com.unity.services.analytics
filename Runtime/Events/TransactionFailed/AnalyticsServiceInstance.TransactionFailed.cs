@@ -7,32 +7,36 @@ namespace Unity.Services.Analytics
     {
         public void TransactionFailed(TransactionFailedParameters parameters)
         {
-            if (!ServiceEnabled)
+            if (m_IsActive)
             {
-                return;
-            }
+                if (String.IsNullOrEmpty(parameters.TransactionName))
+                {
+                    Debug.LogError("Required to have a value for transactionName");
+                }
 
-            if (string.IsNullOrEmpty(parameters.TransactionName))
+                if (parameters.TransactionType.Equals(TransactionType.INVALID))
+                {
+                    Debug.LogError("Required to have a value for transactionType");
+                }
+
+                if (String.IsNullOrEmpty(parameters.FailureReason))
+                {
+                    Debug.LogError("Required to have a failure reason in transactionFailed event");
+                }
+
+                if (String.IsNullOrEmpty(parameters.PaymentCountry))
+                {
+                    parameters.PaymentCountry = Internal.Platform.UserCountry.Name();
+                }
+
+                m_DataGenerator.TransactionFailed(DateTime.Now, m_CommonParams, "com.unity.services.analytics.events.TransactionFailed", parameters);
+            }
+#if UNITY_ANALYTICS_EVENT_LOGS
+            else
             {
-                Debug.LogError("Required to have a value for transactionName");
+                Debug.Log("Did not record transactionFailed event because player has not opted in.");
             }
-
-            if (parameters.TransactionType.Equals(TransactionType.INVALID))
-            {
-                Debug.LogError("Required to have a value for transactionType");
-            }
-
-            if (string.IsNullOrEmpty(parameters.FailureReason))
-            {
-                Debug.LogError("Required to have a failure reason in transactionFailed event");
-            }
-
-            if (string.IsNullOrEmpty(parameters.PaymentCountry))
-            {
-                parameters.PaymentCountry = Internal.Platform.UserCountry.Name();
-            }
-
-            m_DataGenerator.TransactionFailed(DateTime.Now, m_CommonParams, "com.unity.services.analytics.events.TransactionFailed", parameters);
+#endif
         }
     }
 }

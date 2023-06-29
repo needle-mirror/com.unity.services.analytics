@@ -22,29 +22,46 @@ namespace Unity.Services.Analytics
         /// <exception cref="ConsentCheckException">Thrown if the required consent flow cannot be determined..</exception>
         void Flush();
 
+        /// <summary>
+        /// Record an adImpression event, if the player has opted in to data collection (see OptIn method).
+        /// </summary>
+        /// <param name="parameters">(Required) Helper object to handle parameters.</param>
         void AdImpression(AdImpressionParameters parameters);
 
         /// <summary>
-        /// Record a Transaction event.
+        /// Record a transaction event, if the player has opted in to data collection (see OptIn method).
         /// </summary>
         /// <param name="transactionParameters">(Required) Helper object to handle parameters.</param>
         void Transaction(TransactionParameters transactionParameters);
 
         /// <summary>
-        /// Record a TransactionFailed event.
+        /// Record a transactionFailed event, if the player has opted in to data collection.
         /// </summary>
         /// <param name="parameters">(Required) Helper object to handle parameters.</param>
         void TransactionFailed(TransactionFailedParameters parameters);
 
         /// <summary>
-        /// Record a custom event. A schema for this event must exist on the dashboard or it will be ignored.
+        /// Record a custom event, if the player has opted in to data collection (see OptIn method).
+        ///
+        /// A schema for this event must exist on the dashboard or it will be ignored.
         /// </summary>
         void CustomData(string eventName, IDictionary<string, object> eventParams);
 
         /// <summary>
-        /// Record a custom event that does not have any parameters. A schema for this event must exist on the dashboard or it will be ignored.
+        /// Record a custom event that does not have any parameters, if the player has opted in to data collection (see OptIn method).
+        ///
+        /// A schema for this event must exist on the dashboard or it will be ignored.
         /// </summary>
         void CustomData(string eventName);
+
+        /// <summary>
+        /// Signals that consent has been obtained from the player and enables data collection.
+        ///
+        /// By calling this method you confirm that consent has been obtained or is not required from the player under any applicable
+        /// data privacy laws (e.g. GDPR in Europe, PIPL in China). Please obtain your own legal advice to ensure you are in compliance
+        /// with any data privacy laws regarding personal data collection in the territories in which your app is available.
+        /// </summary>
+        void StartDataCollection();
 
         /// <summary>
         /// Returns identifiers of required consents we need to gather from the user
@@ -59,6 +76,7 @@ namespace Unity.Services.Analytics
         /// </summary>
         /// <returns>A list of consent identifiers that are required for sending analytics events.</returns>
         /// <exception cref="ConsentCheckException">Thrown if the GeoIP call was unsuccessful.</exception>
+        [Obsolete("This method is part of the old consent flow and should no longer be used. For more information, please see the migration guide: https://docs.unity.com/analytics/en/manual/AnalyticsSDK5MigrationGuide")]
         Task<List<string>> CheckForRequiredConsents();
 
         /// <summary>
@@ -72,20 +90,35 @@ namespace Unity.Services.Analytics
         /// <param name="consent">The consent status which should be set for the specified legislation.</param>
         /// <exception cref="ConsentCheckException">Thrown if the incorrect legislation was being provided or
         /// the required consent flow cannot be determined.</exception>
+        [Obsolete("This method is part of the old consent flow and should no longer be used. For more information, please see the migration guide: https://docs.unity.com/analytics/en/manual/AnalyticsSDK5MigrationGuide")]
         void ProvideOptInConsent(string identifier, bool consent);
 
         /// <summary>
-        /// Opts the user out of sending analytics from all legislations.
-        /// To deny consent for a specific opt-in legislation, like PIPL, use `ProvideConsent(string key, bool consent)` method)
-        /// All existing cached events and any subsequent events will be discarded immediately.
+        /// Opts the user out of sending analytics and disables the SDK.
         /// A final 'forget me' signal will be uploaded which will trigger purge of analytics data for this user from the back-end.
         /// If this 'forget me' event cannot be uploaded immediately (e.g. due to network outage), it will be reattempted regularly
-        /// until successful upload is confirmed.
-        /// Consent status is stored in PlayerPrefs so that the opted-out status is maintained over app restart.
-        /// This action cannot be undone.
+        /// until successful upload is confirmed. This status is mainted between sessions to ensure that the signal will be uploaded
+        /// eventually.
         /// </summary>
-        /// <exception cref="ConsentCheckException">Thrown if the required consent flow cannot be determined..</exception>
+        [Obsolete("This method is part of the old consent flow and should no longer be used. Please use StopDataCollection() and/or RequestDataDeletion() instead as appropriate. For more information, please see the migration guide: https://docs.unity.com/analytics/en/manual/AnalyticsSDK5MigrationGuide")]
         void OptOut();
+
+        /// <summary>
+        /// Disables data collection, preventing any further events from being recorded or uploaded.
+        /// A final upload containing any events that are currently buffered will be attempted.
+        ///
+        /// Data collection can be re-enabled later, by calling the StartDataCollection method.
+        /// </summary>
+        void StopDataCollection();
+
+        /// <summary>
+        /// Requests that all historic data for this user be purged from the back-end and disables data collection.
+        /// This can be called regardless of whether data collection is currently enabled or disabled.
+        ///
+        /// If the purge request fails (e.g. due to the client being offline), it will be retried until it is successful, even
+        /// across multiple sessions if necessary.
+        /// </summary>
+        void RequestDataDeletion();
 
         /// <summary>
         /// Allows other sources to write events with common analytics parameters to the Analytics service. This is primarily for use
@@ -97,7 +130,7 @@ namespace Unity.Services.Analytics
         void RecordInternalEvent(Event eventToRecord);
 
         /// <summary>
-        /// Record an acquisitionSource event.
+        /// Record an acquisitionSource event, if the player has opted in to data collection (see OptIn method).
         /// </summary>
         /// <param name="acquisitionSourceParameters">(Required) Helper object to handle parameters.</param>
         void AcquisitionSource(AcquisitionSourceParameters acquisitionSourceParameters);
@@ -117,6 +150,7 @@ namespace Unity.Services.Analytics
         /// }
         /// </code>
         /// </example>
+        [Obsolete("This method is part of the old consent flow and should no longer be used. For more information, please see the migration guide: https://docs.unity.com/analytics/en/manual/AnalyticsSDK5MigrationGuide")]
         Task SetAnalyticsEnabled(bool enabled);
 
         /// <summary>

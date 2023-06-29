@@ -7,11 +7,15 @@ namespace Unity.Services.Analytics
     {
         public static void RecordCustomEventWithNoParameters()
         {
+            // NOTE: this will show up on the dashboard as an invalid event, unless
+            // you have created a schema that matches it.
             AnalyticsService.Instance.CustomData("myEvent");
         }
 
         public static void RecordCustomEventWithParameters()
         {
+            // NOTE: this will show up on the dashboard as an invalid event, unless
+            // you have created a schema that matches it.
             var parameters = new Dictionary<string, object>
             {
                 { "fabulousString", "hello there" },

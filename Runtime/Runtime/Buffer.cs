@@ -1,11 +1,4 @@
 using System;
-using System.Collections.Generic;
-using System.Globalization;
-using System.IO;
-using System.Runtime.CompilerServices;
-using System.Text;
-using Newtonsoft.Json;
-using UnityEngine;
 
 namespace Unity.Services.Analytics.Internal
 {
@@ -34,97 +27,5 @@ namespace Unity.Services.Analytics.Internal
 
         [Obsolete("This mechanism is no longer supported and will be removed in a future version. Use the new Core IAnalyticsStandardEventComponent API instead.")]
         void PushEvent(Event evt);
-    }
-
-    class BufferRevoked : IBuffer
-    {
-        public string UserID { get; set; }
-        public string InstallID { get; set; }
-        public string PlayerID { get; set; }
-        public string SessionID { get; set; }
-
-        public int Length => 0;
-
-        public void ClearBuffer()
-        {
-        }
-
-        public void ClearBuffer(long upTo)
-        {
-        }
-
-        public void ClearDiskCache()
-        {
-        }
-
-        public void FlushToDisk()
-        {
-        }
-
-        public void LoadFromDisk()
-        {
-        }
-
-        public void PushArrayEnd()
-        {
-        }
-
-        public void PushArrayStart(string name = null)
-        {
-        }
-
-        public void PushBool(bool val, string name = null)
-        {
-        }
-
-        public void PushDouble(double val, string name = null)
-        {
-        }
-
-        public void PushEndEvent()
-        {
-        }
-
-        [Obsolete("This mechanism is no longer supported and will be removed in a future version. Use the new Core IAnalyticsStandardEventComponent API instead.")]
-        public void PushEvent(Event evt)
-        {
-        }
-
-        public void PushFloat(float val, string name = null)
-        {
-        }
-
-        public void PushInt(int val, string name = null)
-        {
-        }
-
-        public void PushInt64(long val, string name = null)
-        {
-        }
-
-        public void PushObjectEnd()
-        {
-        }
-
-        public void PushObjectStart(string name = null)
-        {
-        }
-
-        public void PushStartEvent(string name, DateTime datetime, long? eventVersion, bool addPlayerIdsToEventBody = false)
-        {
-        }
-
-        public void PushString(string val, string name = null)
-        {
-        }
-
-        public void PushTimestamp(DateTime val, string name = null)
-        {
-        }
-
-        public byte[] Serialize()
-        {
-            return null;
-        }
     }
 }

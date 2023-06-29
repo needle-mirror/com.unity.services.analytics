@@ -3,21 +3,43 @@ using UnityEngine;
 
 namespace Unity.Services.Analytics
 {
-    internal class AnalyticsContainer : MonoBehaviour
+    internal interface IAnalyticsContainer
     {
-        const float k_HeartbeatPeriod = 60.0f;
+        void Initialize(AnalyticsServiceInstance service);
+        void Enable();
+        void Disable();
+    }
+
+    internal class AnalyticsContainer : MonoBehaviour, IAnalyticsContainer
+    {
+        const float k_AutoFlushPeriod = 60.0f;
         const float k_GameRunningPeriod = 60.0f;
 
         static bool s_Created;
         static GameObject s_Container;
 
-        float m_HeartbeatTime = 0.0f;
+        float m_AutoFlushTime = 0.0f;
         float m_GameRunningTime = 0.0f;
+        AnalyticsServiceInstance m_Service;
 
+        float AutoFlushPeriod
+        {
+            get
+            {
+                return k_AutoFlushPeriod * m_Service.AutoflushPeriodMultiplier;
+            }
+        }
+
+        /// <summary>
+        /// For the test harness only.
+        /// </summary>
         internal static AnalyticsContainer Instance { get; private set; }
-        internal float TimeUntilHeartbeat => k_HeartbeatPeriod - m_HeartbeatTime;
+        /// <summary>
+        /// For the test harness only.
+        /// </summary>
+        internal float TimeUntilHeartbeat => AutoFlushPeriod - m_AutoFlushTime;
 
-        internal static void Initialize()
+        internal static AnalyticsContainer CreateContainer()
         {
             if (!s_Created)
             {
@@ -36,6 +58,25 @@ namespace Unity.Services.Analytics
                 DontDestroyOnLoad(s_Container);
                 s_Created = true;
             }
+
+            return Instance;
+        }
+
+        public void Initialize(AnalyticsServiceInstance service)
+        {
+            m_Service = service;
+            enabled = false;
+        }
+
+        public void Enable()
+        {
+            enabled = true;
+        }
+
+        public void Disable()
+        {
+            enabled = false;
+            m_AutoFlushTime = 0.0f;
         }
 
         void Update()
@@ -47,32 +88,30 @@ namespace Unity.Services.Analytics
             m_GameRunningTime += Time.unscaledDeltaTime;
             if (m_GameRunningTime >= k_GameRunningPeriod)
             {
-                AnalyticsService.internalInstance.RecordGameRunningIfNecessary();
+                m_Service.RecordGameRunningIfNecessary();
                 m_GameRunningTime = 0.0f;
             }
 
-            m_HeartbeatTime += Time.unscaledDeltaTime;
-            if (m_HeartbeatTime >= k_HeartbeatPeriod)
+            m_AutoFlushTime += Time.unscaledDeltaTime;
+            if (m_AutoFlushTime >= AutoFlushPeriod)
             {
-                AnalyticsService.internalInstance.InternalTick();
-                m_HeartbeatTime = 0.0f;
+                m_Service.Flush();
+                m_AutoFlushTime = 0.0f;
             }
         }
 
-        private void OnApplicationPause(bool paused)
+        void OnApplicationPause(bool paused)
         {
-            AnalyticsService.internalInstance.ApplicationPaused(paused);
-        }
-
-        internal static void DestroyContainer()
-        {
-            Destroy(s_Container);
-            s_Created = false;
+            m_Service.ApplicationPaused(paused);
         }
 
         void OnDestroy()
         {
-            AnalyticsService.internalInstance.GameEnded();
+            // NOTE: we use OnDestroy rather than OnApplicationQuit in case the game developer should
+            // deliberately/accidentally destroy the container object. This should ensure graceful shutdown
+            // of the SDK regardless of 'how' it actually got turned off.
+
+            m_Service.ApplicationQuit();
 
             s_Container = null;
             s_Created = false;

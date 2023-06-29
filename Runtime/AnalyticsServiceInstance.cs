@@ -38,15 +38,20 @@ namespace Unity.Services.Analytics
 
     partial class AnalyticsServiceInstance : IAnalyticsService, IUnstructuredEventRecorder, IBufferIds
     {
+        internal enum ConsentFlow
+        {
+            Neither,
+            Old,
+            New
+        }
+
         public string PrivacyUrl => "https://unity3d.com/legal/privacy-policy";
 
-        const string k_CollectUrlPattern = "https://collect.analytics.unity3d.com/api/analytics/collect/v1/projects/{0}/environments/{1}";
         const string k_ForgetCallingId = "com.unity.services.analytics.Events." + nameof(OptOut);
         const string m_StartUpCallingId = "com.unity.services.analytics.Events.Startup";
 
         readonly TimeSpan k_BackgroundSessionRefreshPeriod = TimeSpan.FromMinutes(5);
 
-        readonly string m_CollectURL;
         readonly StdCommonParams m_CommonParams;
         readonly IPlayerId m_PlayerId;
         readonly IInstallationId m_InstallId;
@@ -57,19 +62,39 @@ namespace Unity.Services.Analytics
         readonly IAnalyticsForgetter m_AnalyticsForgetter;
         readonly IExternalUserId m_CustomUserId;
         readonly IAnalyticsServiceSystemCalls m_SystemCalls;
-
-        readonly IBuffer m_RealBuffer;
-        readonly IBuffer m_RevokedBuffer;
+        readonly IAnalyticsContainer m_Container;
 
         internal IBuffer m_DataBuffer;
 
         internal string CustomAnalyticsId { get { return m_CustomUserId.UserId; } }
-        internal bool ServiceEnabled { get; private set; } = true;
 
         public string SessionID { get; private set; }
 
         int m_BufferLengthAtLastGameRunning;
         DateTime m_ApplicationPauseTime;
+
+        bool m_IsActive;
+        ConsentFlow m_ConsentFlow;
+
+        /// <summary>
+        /// This is for internal unit test usage only.
+        /// In the real world, use Activate() and Deactivate().
+        /// </summary>
+        internal bool Active
+        {
+            get { return m_IsActive; }
+            set { m_IsActive = value; }
+        }
+
+        /// <summary>
+        /// This is for internal unit test usage only.
+        /// In the real world, flow is selected by calling OptIn() or CheckForRequiredConsents().
+        /// </summary>
+        internal ConsentFlow SelectedConsentFlow
+        {
+            get { return m_ConsentFlow; }
+            set { m_ConsentFlow = value; }
+        }
 
         public string UserId { get { return GetAnalyticsUserID(); } }
         public string InstallId { get { return m_InstallId.GetOrCreateIdentifier(); } }
@@ -78,31 +103,32 @@ namespace Unity.Services.Analytics
 
         internal AnalyticsServiceInstance(IDataGenerator dataGenerator,
                                           IBuffer realBuffer,
-                                          IBuffer revokedBuffer,
                                           ICoreStatsHelper coreStatsHelper,
                                           IConsentTracker consentTracker,
                                           IDispatcher dispatcher,
                                           IAnalyticsForgetter forgetter,
-                                          ICloudProjectId cloudProjectId,
                                           IInstallationId installId,
                                           IPlayerId playerId,
                                           string environment,
                                           IExternalUserId customAnalyticsId,
-                                          IAnalyticsServiceSystemCalls systemCalls)
+                                          IAnalyticsServiceSystemCalls systemCalls,
+                                          IAnalyticsContainer container)
         {
             m_CustomUserId = customAnalyticsId;
 
             m_DataGenerator = dataGenerator;
             m_SystemCalls = systemCalls;
 
-            m_RealBuffer = realBuffer;
-            m_RevokedBuffer = revokedBuffer;
-
             m_CoreStatsHelper = coreStatsHelper;
             m_ConsentTracker = consentTracker;
             m_DataDispatcher = dispatcher;
+            m_Container = container;
 
-            SwapToRealBuffer();
+            m_DataBuffer = realBuffer;
+            m_DataDispatcher.SetBuffer(realBuffer);
+            m_DataGenerator.SetBuffer(realBuffer);
+
+            m_IsActive = false;
 
             m_AnalyticsForgetter = forgetter;
 
@@ -119,27 +145,18 @@ namespace Unity.Services.Analytics
             m_InstallId = installId;
             m_PlayerId = playerId;
 
-            string projectId = cloudProjectId?.GetCloudProjectId() ?? Application.cloudProjectId;
-            m_CommonParams.ProjectID = projectId;
-            m_CollectURL = String.Format(k_CollectUrlPattern, projectId, environment.ToLowerInvariant());
-
             RefreshSessionID();
 
 #if UNITY_ANALYTICS_DEVELOPMENT
-            Debug.LogFormat("UA2 Setup\nCollectURL: {0}\nSessionID: {1}", m_CollectURL, SessionID);
+            Debug.LogFormat("UA2 Setup SessionID: {0}", SessionID);
 #endif
         }
 
-        internal async Task Initialize()
+        internal void ResumeDataDeletionIfNecessary()
         {
-            if (ServiceEnabled)
+            if (m_AnalyticsForgetter.DeletionInProgress)
             {
-                AnalyticsContainer.Initialize();
-
-                await InitializeUser();
-
-                // Startup events require a user ID (either Installation or Custom).
-                RecordStartupEvents();
+                DeactivateWithDataDeletionRequest();
             }
         }
 
@@ -168,23 +185,126 @@ namespace Unity.Services.Analytics
 #endif
         }
 
+        public void StartDataCollection()
+        {
+            // The New flow allows "opt out and back in again", so this method can be activated
+            // repeatedly within a single session. It should do nothing if the SDK is already
+            // active, but otherwise (re)activate the SDK as normal.
+            if (m_ConsentFlow == ConsentFlow.Neither ||
+                m_ConsentFlow == ConsentFlow.New)
+            {
+                m_ConsentFlow = ConsentFlow.New;
+
+                if (!m_IsActive)
+                {
+                    // In case you had previously requested data deletion, you must now be able to request it again.
+                    m_AnalyticsForgetter.ResetDataDeletionStatus();
+                    m_CoreStatsHelper.SetCoreStatsConsent(true);
+
+                    Activate();
+                }
+            }
+            else if (m_ConsentFlow == ConsentFlow.Old)
+            {
+                throw new NotSupportedException("The OptIn method cannot be used under the old consent flow.");
+            }
+        }
+
+        void Activate()
+        {
+            if (!m_IsActive)
+            {
+                m_IsActive = true;
+                m_Container.Enable();
+                m_DataBuffer.LoadFromDisk();
+
+                RecordStartupEvents();
+
+                Flush();
+            }
+        }
+
+        public void StopDataCollection()
+        {
+            if (m_ConsentFlow == ConsentFlow.New)
+            {
+                if (m_IsActive)
+                {
+                    m_DataDispatcher.Flush();
+                    Deactivate();
+                }
+            }
+            else if (m_ConsentFlow == ConsentFlow.Old)
+            {
+                throw new NotSupportedException("The StopDataCollection() method cannot be used under the old consent flow. Please see the migration guide for more information: https://docs.unity.com/analytics/en/manual/AnalyticsSDK5MigrationGuide");
+            }
+            else
+            {
+                throw new NotSupportedException("The StopDataCollection() method cannot be used before StartDataCollection() has been called.");
+            }
+        }
+
+        internal void DeactivateWithDataDeletionRequest()
+        {
+            m_DataBuffer.ClearBuffer();
+            m_DataBuffer.ClearDiskCache();
+            m_Container.Enable();
+            m_AnalyticsForgetter.AttemptToForget(UserId, InstallId, PlayerId, BufferX.SerializeDateTime(DateTime.Now), k_ForgetCallingId, DataDeletionCompleted);
+
+            Deactivate();
+        }
+
+        void DataDeletionCompleted()
+        {
+            if (!m_IsActive)
+            {
+                m_Container.Disable();
+            }
+        }
+
+        void Deactivate()
+        {
+            if (m_IsActive)
+            {
+                m_IsActive = false;
+
+                if ((m_ConsentFlow == ConsentFlow.New && !m_AnalyticsForgetter.DeletionInProgress) ||
+                    (m_ConsentFlow == ConsentFlow.Old && !m_ConsentTracker.IsOptingOutInProgress()))
+                {
+                    // Only disable the container if opting out is not in progress. Otherwise, leave it
+                    // running so that the heartbeat can re-attempt the deletion request upload until
+                    // it succeeds.
+                    m_Container.Disable();
+                }
+            }
+
+            m_CoreStatsHelper.SetCoreStatsConsent(false);
+        }
+
+        bool m_StartUpEventsRecorded = false;
         void RecordStartupEvents()
         {
-            // Startup Events.
-            m_DataGenerator.SdkStartup(DateTime.Now, m_CommonParams, m_StartUpCallingId);
-            m_DataGenerator.ClientDevice(DateTime.Now, m_CommonParams, m_StartUpCallingId, SystemInfo.processorType, SystemInfo.graphicsDeviceName, SystemInfo.processorCount, SystemInfo.systemMemorySize, Screen.width, Screen.height, (int)Screen.dpi);
+            if (!m_StartUpEventsRecorded)
+            {
+                // Only record start-up events once in a session, even if the player opts in/out/in again.
+                m_StartUpEventsRecorded = true;
+
+                // Startup Events.
+                m_DataGenerator.SdkStartup(DateTime.Now, m_CommonParams, m_StartUpCallingId);
+                m_DataGenerator.ClientDevice(DateTime.Now, m_CommonParams, m_StartUpCallingId, SystemInfo.processorType, SystemInfo.graphicsDeviceName, SystemInfo.processorCount, SystemInfo.systemMemorySize, Screen.width, Screen.height, (int)Screen.dpi);
 
 #if UNITY_DOTSRUNTIME
-            var isTiny = true;
+                var isTiny = true;
 #else
-            var isTiny = false;
+                var isTiny = false;
 #endif
 
-            m_DataGenerator.GameStarted(DateTime.Now, m_CommonParams, m_StartUpCallingId, Application.buildGUID, SystemInfo.operatingSystem, isTiny, DebugDevice.IsDebugDevice(), Locale.AnalyticsRegionLanguageCode());
+                m_DataGenerator.GameStarted(DateTime.Now, m_CommonParams, m_StartUpCallingId, Application.buildGUID, SystemInfo.operatingSystem, isTiny, DebugDevice.IsDebugDevice(), Locale.AnalyticsRegionLanguageCode());
 
-            if (m_InstallId != null && new InternalNewPlayerHelper(m_InstallId).IsNewPlayer())
-            {
-                m_DataGenerator.NewPlayer(DateTime.Now, m_CommonParams, m_StartUpCallingId, SystemInfo.deviceModel);
+                if (m_InstallId != null && new InternalNewPlayerHelper(m_InstallId).IsNewPlayer())
+                {
+                    m_DataGenerator.NewPlayer(DateTime.Now, m_CommonParams, m_StartUpCallingId, SystemInfo.deviceModel);
+                }
             }
         }
 
@@ -225,58 +345,75 @@ namespace Unity.Services.Analytics
 #endif
         }
 
+        internal int AutoflushPeriodMultiplier
+        {
+            get { return Mathf.Clamp(1 + m_DataDispatcher.ConsecutiveFailedUploadCount, 1, 8); }
+        }
+
         public void Flush()
         {
-            if (!ServiceEnabled)
+            if (m_IsActive)
             {
-                return;
-            }
+                switch (m_ConsentFlow)
+                {
+                    case ConsentFlow.Old:
+                        if (m_ConsentTracker.IsGeoIpChecked() && m_ConsentTracker.IsConsentGiven())
+                        {
+                            m_DataDispatcher.Flush();
+                        }
+                        else
+                        {
+                            // Also, check if the consent was definitely checked and given at this point.
+                            Debug.LogWarning("Required consent wasn't checked and given when trying to dispatch events, the events cannot be sent.");
+                        }
 
-            if (m_ConsentTracker.IsGeoIpChecked() && m_ConsentTracker.IsConsentGiven())
-            {
-                m_DataDispatcher.CollectUrl = m_CollectURL;
-                m_DataDispatcher.Flush();
+                        if (m_ConsentTracker.IsOptingOutInProgress())
+                        {
+                            m_AnalyticsForgetter.AttemptToForget(UserId, InstallId, PlayerId, BufferX.SerializeDateTime(DateTime.Now), k_ForgetCallingId, OldForgetMeEventUploaded);
+                        }
+                        break;
+                    case ConsentFlow.New:
+                        // No need for conditional guard, m_IsActive is only true if we are clear to flush.
+                        m_DataDispatcher.Flush();
+                        break;
+                }
             }
-
-            if (m_ConsentTracker.IsOptingOutInProgress())
+            else if (m_AnalyticsForgetter.DeletionInProgress)
             {
-                m_AnalyticsForgetter.AttemptToForget(m_CollectURL, m_InstallId.GetOrCreateIdentifier(), BufferX.SerializeDateTime(DateTime.Now), k_ForgetCallingId, ForgetMeEventUploaded);
+                DeactivateWithDataDeletionRequest();
             }
         }
 
-        [Obsolete("This mechanism is no longer supported and will be removed in a future version. Use the new Core IAnalyticsStandardEventComponent API instead.")]
+        public void RequestDataDeletion()
+        {
+            DeactivateWithDataDeletionRequest();
+        }
+
         public void RecordInternalEvent(Event eventToRecord)
         {
-            if (!ServiceEnabled)
+            if (m_IsActive)
             {
-                return;
+                m_DataBuffer.PushEvent(eventToRecord);
             }
-
-            m_DataBuffer.PushEvent(eventToRecord);
         }
 
-        /// <summary>
-        /// Records the gameEnded event, and flushes the buffer to upload all events.
-        /// </summary>
-        internal void GameEnded()
+        internal void ApplicationQuit()
         {
-            if (!ServiceEnabled)
+            if (m_IsActive)
             {
-                return;
-            }
+                m_DataGenerator.GameEnded(DateTime.Now, m_CommonParams, "com.unity.services.analytics.Events.Shutdown", DataGenerator.SessionEndState.QUIT);
 
-            m_DataGenerator.GameEnded(DateTime.Now, m_CommonParams, "com.unity.services.analytics.Events.Shutdown", DataGenerator.SessionEndState.QUIT);
+                // Flush to disk before attempting final upload, in case we do not have enough time during teardown
+                // to make the request and/or determine its success (e.g. if we shut down offline)
+                m_DataBuffer.FlushToDisk();
 
-            // Need to null check the consent tracker here in case the game ends before the tracker can be initialised.
-            if (m_ConsentTracker != null && m_ConsentTracker.IsGeoIpChecked())
-            {
                 Flush();
             }
         }
 
         internal void RecordGameRunningIfNecessary()
         {
-            if (ServiceEnabled)
+            if (m_IsActive)
             {
                 if (m_DataBuffer.Length == 0 || m_DataBuffer.Length == m_BufferLengthAtLastGameRunning)
                 {
@@ -291,70 +428,29 @@ namespace Unity.Services.Analytics
             }
         }
 
-        // <summary>
-        // Internal tick is called by the Heartbeat at set intervals.
-        // </summary>
-        internal void InternalTick()
-        {
-            if (ServiceEnabled &&
-                m_ConsentTracker.IsGeoIpChecked())
-            {
-                Flush();
-            }
-        }
-
         void SetVariableCommonParams()
         {
+            // TODO: these should be updated on serialising any event that contains them,
+            // not at sporadic points throughout the lifecycle. We seem to have lost track of
+            // these during successive refactorings.
             m_CommonParams.DeviceVolume = DeviceVolumeProvider.GetDeviceVolume();
             m_CommonParams.BatteryLoad = SystemInfo.batteryLevel;
             m_CommonParams.UasUserID = m_PlayerId?.PlayerId;
         }
 
-        void GameEnded(DataGenerator.SessionEndState quitState)
-        {
-            if (!ServiceEnabled)
-            {
-                return;
-            }
-
-            m_DataGenerator.GameEnded(DateTime.Now, m_CommonParams, "com.unity.services.analytics.Events.GameEnded", quitState);
-        }
-
         public async Task SetAnalyticsEnabled(bool enabled)
         {
-            if (enabled && !ServiceEnabled)
+            if (enabled && !m_IsActive)
             {
-                SwapToRealBuffer();
-
-                await InitializeUser();
-
-                ServiceEnabled = true;
+                Activate();
             }
-            else if (!enabled && ServiceEnabled)
+            else if (!enabled && m_IsActive)
             {
-                SwapToRevokedBuffer();
-
-                ServiceEnabled = false;
+                Deactivate();
             }
-        }
 
-        void SwapToRevokedBuffer()
-        {
-            // Clear everything out of the real buffer and replace it with a dummy
-            // that will swallow all events and do nothing
-            m_RealBuffer.ClearBuffer();
-            m_RealBuffer.ClearDiskCache();
-            m_DataBuffer = m_RevokedBuffer;
-            m_DataGenerator.SetBuffer(m_RevokedBuffer);
-            m_DataDispatcher.SetBuffer(m_RevokedBuffer);
-        }
-
-        void SwapToRealBuffer()
-        {
-            // Reinstate the real buffer so events will be recorded again
-            m_DataBuffer = m_RealBuffer;
-            m_DataGenerator.SetBuffer(m_RealBuffer);
-            m_DataDispatcher.SetBuffer(m_RealBuffer);
+            // For backwards compatibility.
+            await Task.CompletedTask;
         }
     }
 }

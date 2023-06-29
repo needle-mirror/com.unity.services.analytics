@@ -34,9 +34,15 @@ namespace Unity.Services.Analytics
         async void Start()
         {
             await UnityServices.InitializeAsync();
-            await AnalyticsService.Instance.CheckForRequiredConsents();
 
             Debug.Log($"Started UGS Analytics Sample with user ID: {AnalyticsService.Instance.GetAnalyticsUserID()}");
+        }
+
+        public void GiveConsent()
+        {
+            AnalyticsService.Instance.StartDataCollection();
+
+            Debug.Log($"Consent has been provided. The SDK is now collecting data!");
         }
 
         public void RecordMinimalAdImpressionEvent()

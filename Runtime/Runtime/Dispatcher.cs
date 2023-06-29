@@ -7,29 +7,35 @@ namespace Unity.Services.Analytics.Internal
 {
     interface IDispatcher
     {
+        int ConsecutiveFailedUploadCount { get; }
+
         void SetBuffer(IBuffer buffer);
-        string CollectUrl { get; set; }
+
         void Flush();
     }
 
     class Dispatcher : IDispatcher
     {
         readonly IWebRequestHelper m_WebRequestHelper;
-        readonly IConsentTracker m_ConsentTracker;
+        readonly string m_CollectUrl;
+
+        internal const string k_PiplConsentHeaderKey = "PIPL_CONSENT";
+        internal const string k_PiplExportHeaderKey = "PIPL_EXPORT";
+        internal const string k_HeaderTrueValue = "true";
 
         IBuffer m_DataBuffer;
         IWebRequest m_FlushRequest;
+
+        public int ConsecutiveFailedUploadCount { get; private set; }
 
         internal bool FlushInProgress { get; private set; }
 
         private int m_FlushBufferIndex;
 
-        public string CollectUrl { get; set; }
-
-        public Dispatcher(IWebRequestHelper webRequestHelper, IConsentTracker consentTracker)
+        public Dispatcher(IWebRequestHelper webRequestHelper, string collectUrl)
         {
             m_WebRequestHelper = webRequestHelper;
-            m_ConsentTracker = consentTracker;
+            m_CollectUrl = collectUrl;
         }
 
         public void SetBuffer(IBuffer buffer)
@@ -42,11 +48,6 @@ namespace Unity.Services.Analytics.Internal
             if (FlushInProgress)
             {
                 Debug.LogWarning("Analytics Dispatcher is already flushing.");
-            }
-            else if (!m_ConsentTracker.IsGeoIpChecked() || !m_ConsentTracker.IsConsentGiven())
-            {
-                // Also, check if the consent was definitely checked and given at this point.
-                Debug.LogWarning("Required consent wasn't checked and given when trying to dispatch events, the events cannot be sent.");
             }
             else
             {
@@ -68,15 +69,10 @@ namespace Unity.Services.Analytics.Internal
             }
             else
             {
-                m_FlushRequest = m_WebRequestHelper.CreateWebRequest(CollectUrl, UnityWebRequest.kHttpVerbPOST, postBytes);
+                m_FlushRequest = m_WebRequestHelper.CreateWebRequest(m_CollectUrl, UnityWebRequest.kHttpVerbPOST, postBytes);
 
-                if (m_ConsentTracker.IsGeoIpChecked() && m_ConsentTracker.IsConsentGiven())
-                {
-                    foreach (var header in m_ConsentTracker.requiredHeaders)
-                    {
-                        m_FlushRequest.SetRequestHeader(header.Key, header.Value);
-                    }
-                }
+                m_FlushRequest.SetRequestHeader(k_PiplExportHeaderKey, k_HeaderTrueValue);
+                m_FlushRequest.SetRequestHeader(k_PiplConsentHeaderKey, k_HeaderTrueValue);
 
                 m_WebRequestHelper.SendWebRequest(m_FlushRequest, UploadCompleted);
 
@@ -88,42 +84,57 @@ namespace Unity.Services.Analytics.Internal
 
         void UploadCompleted(long responseCode)
         {
-            if (!m_FlushRequest.isNetworkError &&
-                (responseCode == 204 || responseCode == 400))
+            bool success = responseCode >= 200 && responseCode <= 299;
+            bool badRequest = responseCode >= 400 && responseCode <= 499;
+            bool intermittentError = responseCode >= 500 && responseCode <= 599 || m_FlushRequest.IsNetworkError;
+
+            if (success || badRequest)
             {
-                // If we get a 400 response code, the JSON is malformed which means we have a bad event somewhere
-                // in the queue. In this case, our only recourse is to clear the buffer and discard all events. If bad
-                // events were left in the queue, they would recur forever and no more data would ever be uploaded.
-                // So, slightly counter-intuitively, our actions on getting a success 204 and an error 400 are actually the same.
-                // Other errors are likely transient and should not result in clearance of the buffer.
+#if UNITY_ANALYTICS_EVENT_LOGS
+                if (ConsecutiveFailedUploadCount > 0)
+                {
+                    Debug.Log("An upload request finally got through, consecutive failure count has been reset.");
+                }
+#endif
+
+                ConsecutiveFailedUploadCount = 0;
+
+                // If we get a 2xx response code, the request is good and has gone through successfully,
+                // so we can safely discard the buffer knowing the data has reached its destination.
+                // If we get a 4xx response code, the request is bad and we should discard the buffer.
+                // Reasons include:
+                //  - JSON is malformed; we have a bad event somewhere and all we can do is bin the lot
+                //  - Project has been usage-gated and turned off; we will never get data through so might as well drop it all
 
                 m_DataBuffer.ClearBuffer(m_FlushBufferIndex);
                 m_DataBuffer.ClearDiskCache();
 
 #if UNITY_ANALYTICS_EVENT_LOGS
-                if (responseCode == 204)
+                if (success)
                 {
                     Debug.Log("Events uploaded successfully!");
                 }
                 else
                 {
-                    Debug.Log("Events upload failed due to malformed JSON, likely from corrupt event. Event buffer has been cleared.");
+                    Debug.Log($"Events upload failed ({responseCode}). Please visit the UGS Analytics dashboard to check for any relevant alerts. The event buffer has been cleared.");
                 }
 #endif
             }
-            else
+            else if (intermittentError)
             {
+                ConsecutiveFailedUploadCount++;
+
                 // Flush to disk in case we end up exiting before connectivity is re-established.
                 m_DataBuffer.FlushToDisk();
 
 #if UNITY_ANALYTICS_EVENT_LOGS
-                if (m_FlushRequest.isNetworkError)
+                if (m_FlushRequest.IsNetworkError)
                 {
-                    Debug.Log("Events failed to upload (network error) -- will retry at next heartbeat.");
+                    Debug.Log("Events failed to upload (network error) -- upload will be reattempted later.");
                 }
                 else
                 {
-                    Debug.LogFormat("Events failed to upload (code {0}) -- will retry at next heartbeat.", responseCode);
+                    Debug.LogFormat("Events failed to upload (code {0}) -- upload will be reattempted later.", responseCode);
                 }
 #endif
             }

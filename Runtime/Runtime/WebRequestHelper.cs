@@ -1,5 +1,4 @@
 using System;
-using UnityEngine;
 using UnityEngine.Networking;
 
 namespace Unity.Services.Analytics.Internal
@@ -9,7 +8,7 @@ namespace Unity.Services.Analytics.Internal
         UnityWebRequestAsyncOperation SendWebRequest();
         UploadHandler uploadHandler { get; set; }
         void SetRequestHeader(string key, string value);
-        bool isNetworkError { get; }
+        bool IsNetworkError { get; }
         void Dispose();
     }
 
@@ -21,11 +20,25 @@ namespace Unity.Services.Analytics.Internal
 
     class AnalyticsWebRequest : UnityWebRequest, IWebRequest
     {
-        internal AnalyticsWebRequest(string url, string method) : base(url, method) { }
+        internal AnalyticsWebRequest(string url, string method) : base(url, method) {}
+
+        public bool IsNetworkError
+        {
+            get
+            {
+#if UNITY_2020_1_OR_NEWER
+                return result == UnityWebRequest.Result.ConnectionError;
+#else
+                return isNetworkError;
+#endif
+            }
+        }
     }
 
     class WebRequestHelper : IWebRequestHelper
     {
+        readonly string k_ClientIdHeaderValue = "com.unity.services.analytics@" + SdkVersion.SDK_VERSION;
+
         public IWebRequest CreateWebRequest(string url, string method, byte[] postBytes)
         {
             var request = new AnalyticsWebRequest(url, method);
@@ -34,6 +47,7 @@ namespace Unity.Services.Analytics.Internal
                 contentType = "application/json"
             };
             request.uploadHandler = upload;
+            request.SetRequestHeader("x-client-id", k_ClientIdHeaderValue);
             return request;
         }
 

@@ -94,17 +94,24 @@ namespace Unity.Services.Analytics.Internal
         private readonly IFileSystemCalls k_SystemCalls;
         private readonly long k_CacheFileMaximumSize;
 
-        public DiskCache(IFileSystemCalls systemCalls)
+        internal DiskCache(IFileSystemCalls systemCalls)
         {
-            // NOTE: Since we now have some defence against trying to read files that don't match the new file format,
-            // we are safe to keep reusing the same file path. We will simply ignore and delete/overwrite the cache
-            // from older SDK versions.
-            k_CacheFilePath = $"{Application.persistentDataPath}/eventcache";
+            if (systemCalls.CanAccessFileSystem())
+            {
+                // NOTE: On console platforms where file system access is restricted, even asking for the persistentDataPath
+                // can cause an exception, let alone trying to write to it. Be careful!
+
+                // NOTE: Since we now have some defence against trying to read files that don't match the new file format,
+                // we are safe to keep reusing the same file path. We will simply ignore and delete/overwrite the cache
+                // from older SDK versions.
+                k_CacheFilePath = $"{Application.persistentDataPath}/eventcache";
+            }
+
             k_SystemCalls = systemCalls;
             k_CacheFileMaximumSize = 5 * 1024 * 1024; // 5MB, 1024B * 1024KB * 5
         }
 
-        public DiskCache(string cacheFilePath, IFileSystemCalls systemCalls, long maximumFileSize)
+        internal DiskCache(string cacheFilePath, IFileSystemCalls systemCalls, long maximumFileSize)
         {
             k_CacheFilePath = cacheFilePath;
             k_SystemCalls = systemCalls;

@@ -4,6 +4,34 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [5.0.0] - 2023-06-29
+
+### Added
+
+* New initialization and consent flow. Please see the migration guide for more information: https://docs.unity.com/analytics/en/manual/AnalyticsSDK5MigrationGuide
+
+### Deprecated
+
+* The old initialization and consent flow should no longer be used and will be removed in a future version of the SDK. Please see the migration guide for more information: https://docs.unity.com/analytics/en/manual/AnalyticsSDK5MigrationGuide
+
+### Changed
+
+* Updated `com.unity.services.core` dependency to 1.10.1
+
+### Breaking Changes
+* The package no longer has a dependency on Newtonsoft.Json
+* The package now has a dependency on the Unity JsonSerialize module (JsonUtility)
+* A number of elements that were previously marked as Obsolete have now been removed
+
+### Fixed
+
+* Analytics no longer blocks services initialization (`UnityServices.InitializeAsync`) if there is no internet connection
+* It is now possible to opt in to data collection during a session where the player has previously opted out (requires migration to the new consent flow)
+* Application.persistentDataPath is no longer requested on some platforms where access to the file system is denied by default
+* Event buffer is now cleared on a wider variety of server responses
+* Events are more eagerly cached to disk (if available) on shutdown to prevent data loss if game is closed while offline
+* Data deletion requests are now sent using the custom user ID if one is set, instead of always using the installation ID
+
 ## [4.4.2] - 2023-04-04
 
 ### Fixed

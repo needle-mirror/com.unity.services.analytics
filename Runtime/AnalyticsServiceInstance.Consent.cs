@@ -11,99 +11,142 @@ namespace Unity.Services.Analytics
     {
         public async Task<List<string>> CheckForRequiredConsents()
         {
-            var response = await m_ConsentTracker.CheckGeoIP();
-
-            if (response.identifier == Consent.None)
+            if (m_ConsentFlow == ConsentFlow.New)
             {
-                return new List<string>();
+                throw new NotSupportedException("The CheckForRequiredConsents method cannot be used under the new consent flow.");
             }
-
-            if (m_ConsentTracker.IsConsentDenied())
+            else
             {
-                return new List<string>();
-            }
+                m_ConsentFlow = ConsentFlow.Old;
 
-            if (!m_ConsentTracker.IsConsentGiven())
-            {
-                return new List<string> { response.identifier };
-            }
+                await InitializeUser();
 
-            return new List<string>();
+                var response = await m_ConsentTracker.CheckGeoIP();
+
+                // Consent is not required. We are clear to proceed.
+                // Automatically activate the SDK.
+                if (response.identifier == Consent.None)
+                {
+                    Activate();
+                    return new List<string>();
+                }
+                else
+                {
+                    // Consent is required.
+
+                    // Consent has previously been denied, from value in PlayerPrefs.
+                    // Do not activate the SDK.
+                    if (m_ConsentTracker.IsConsentDenied())
+                    {
+                        return new List<string>();
+                    }
+
+                    // Consent has not yet been given or denied. No value in PlayerPrefs.
+                    // Do not activate the SDK. It will be activated by using ProvideOptInConsent(...).
+                    if (!m_ConsentTracker.IsConsentGiven())
+                    {
+                        return new List<string> { response.identifier };
+                    }
+
+                    // Consent has been given previously, from value in PlayerPrefs. We are clear to proceed.
+                    // Automatically activate the SDK.
+                    Activate();
+                    return new List<string>();
+                }
+            }
         }
 
         public void ProvideOptInConsent(string identifier, bool consent)
         {
-            m_CoreStatsHelper.SetCoreStatsConsent(consent);
-
-            if (!m_ConsentTracker.IsGeoIpChecked())
+            if (m_ConsentFlow == ConsentFlow.New)
             {
-                throw new ConsentCheckException(ConsentCheckExceptionReason.ConsentFlowNotKnown,
-                    CommonErrorCodes.Unknown,
-                    "The required consent flow cannot be determined. Make sure CheckForRequiredConsents() method was successfully called.",
-                    null);
+                throw new NotSupportedException("The ProvideOptInConsent method cannot be used under the new consent flow.");
             }
-
-            if (consent == false)
+            else
             {
-                if (m_ConsentTracker.IsConsentGiven(identifier))
+                m_ConsentFlow = ConsentFlow.Old;
+
+                m_CoreStatsHelper.SetCoreStatsConsent(consent);
+
+                if (!m_ConsentTracker.IsGeoIpChecked())
                 {
-                    m_ConsentTracker.BeginOptOutProcess(identifier);
-                    RevokeWithForgetEvent();
-                    return;
+                    throw new ConsentCheckException(ConsentCheckExceptionReason.ConsentFlowNotKnown,
+                        CommonErrorCodes.Unknown,
+                        "The required consent flow cannot be determined. Make sure CheckForRequiredConsents() method was successfully called.",
+                        null);
                 }
 
-                Revoke();
-            }
+                if (consent == false)
+                {
+                    if (m_ConsentTracker.IsConsentGiven(identifier))
+                    {
+                        m_ConsentTracker.BeginOptOutProcess(identifier);
+                        RevokeWithForgetEvent();
+                        return;
+                    }
+                }
 
-            m_ConsentTracker.SetUserConsentStatus(identifier, consent);
+                m_ConsentTracker.SetUserConsentStatus(identifier, consent);
+                if (consent)
+                {
+                    Activate();
+                }
+                else
+                {
+                    Deactivate();
+                }
+            }
         }
 
         public void OptOut()
         {
-            Debug.Log(m_ConsentTracker.IsConsentDenied()
-                ? "This user has opted out. Any cached events have been discarded and no more will be collected."
-                : "This user has opted out and is in the process of being forgotten...");
-
-            if (m_ConsentTracker.IsConsentGiven())
+            if (m_ConsentFlow == ConsentFlow.New)
             {
-                // We have revoked consent but have not yet sent the ForgetMe signal
-                // Thus we need to keep some of the dispatcher alive until that is done
-                m_ConsentTracker.BeginOptOutProcess();
-                RevokeWithForgetEvent();
-
-                return;
+                throw new NotSupportedException("The OptOut() method cannot be used under the new consent flow. Please see the migration guide for more information: https://docs.unity.com/analytics/en/manual/AnalyticsSDK5MigrationGuide");
             }
-
-            if (m_ConsentTracker.IsOptingOutInProgress())
+            else
             {
-                RevokeWithForgetEvent();
-                return;
+                Debug.Log(m_ConsentTracker.IsConsentDenied()
+                    ? "This user has opted out. Any cached events have been discarded and no more will be collected."
+                    : "This user has opted out and is in the process of being forgotten...");
+
+                if (m_ConsentTracker.IsConsentGiven())
+                {
+                    // We have revoked consent but have not yet sent the ForgetMe signal
+                    // Thus we need to keep some of the dispatcher alive until that is done
+                    m_ConsentTracker.BeginOptOutProcess();
+                    RevokeWithForgetEvent();
+
+                    return;
+                }
+
+                if (m_ConsentTracker.IsOptingOutInProgress())
+                {
+                    RevokeWithForgetEvent();
+                    return;
+                }
+
+                Deactivate();
+                m_ConsentTracker.SetDenyConsentToAll();
+                m_CoreStatsHelper.SetCoreStatsConsent(false);
             }
-
-            Revoke();
-            m_ConsentTracker.SetDenyConsentToAll();
-            m_CoreStatsHelper.SetCoreStatsConsent(false);
-        }
-
-        void Revoke()
-        {
-            // We have already been forgotten and so do not need to send the ForgetMe signal
-            SwapToRevokedBuffer();
-
-            AnalyticsContainer.DestroyContainer();
         }
 
         internal void RevokeWithForgetEvent()
         {
-            SwapToRevokedBuffer();
+            m_AnalyticsForgetter.AttemptToForget(UserId, InstallId, PlayerId, BufferX.SerializeDateTime(DateTime.Now), k_ForgetCallingId, OldForgetMeEventUploaded);
 
-            m_AnalyticsForgetter.AttemptToForget(m_CollectURL, m_InstallId.GetOrCreateIdentifier(), BufferX.SerializeDateTime(DateTime.Now), k_ForgetCallingId, ForgetMeEventUploaded);
+            Deactivate();
         }
 
-        internal void ForgetMeEventUploaded()
+        internal void OldForgetMeEventUploaded()
         {
-            AnalyticsContainer.DestroyContainer();
             m_ConsentTracker.FinishOptOutProcess();
+
+            if (!m_IsActive)
+            {
+                m_Container.Disable();
+            }
 
 #if UNITY_ANALYTICS_EVENT_LOGS
             Debug.Log("User opted out successfully and has been forgotten!");

@@ -41,25 +41,5 @@ namespace Unity.Services.Analytics.Internal
             // infer country from GeoIP instead.
             return $"{CurrentLanguageCode()}_ZZ";
         }
-
-        /// <summary>
-        /// Returns the current culture info. Invokes native method on Android and iOS.
-        /// </summary>
-        /// <returns></returns>
-        [Obsolete("The 'language-regionSettingsCountry' code used by Analytics is non-standard, so this method may throw exceptions when used on systems with non-ISO language/region combinations. Prefer using AnalyticsRegionLanguageCode instead.")]
-        public static CultureInfo CurrentCulture()
-        {
-            return CultureInfo.CurrentCulture;
-        }
-
-        /// <summary>
-        /// Returns the current culture info. Invokes native method on iOS.
-        /// </summary>
-        /// <returns></returns>
-        [Obsolete("The 'language-regionSettingsCountry' code used by Analytics is non-standard, so this method may throw exceptions when used on systems with non-ISO language/region combinations. Prefer using AnalyticsRegionLanguageCode instead.")]
-        public static CultureInfo SystemCulture()
-        {
-            return CultureInfo.InvariantCulture;
-        }
     }
 }

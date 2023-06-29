@@ -1,7 +1,6 @@
 using System;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
 using Unity.Services.Core;
 using UnityEngine;
 using UnityEngine.Networking;
@@ -45,7 +44,16 @@ namespace Unity.Services.Analytics.Internal
 
             try
             {
-                var response = JsonConvert.DeserializeObject<GeoIPResponse>(async.webRequest.downloadHandler.text);
+#if UNITY_EDITOR && UNITY_ANALYTICS_CONSENT_PRETEND_TO_BE_CHINA
+                return new GeoIPResponse
+                {
+                    ageGateLimit = 0,
+                    country = "CN",
+                    identifier = "pipl",
+                    region = ""
+                };
+#else
+                var response = JsonUtility.FromJson<GeoIPResponse>(async.webRequest.downloadHandler.text);
                 if (response == null)
                 {
                     throw new ConsentCheckException(ConsentCheckExceptionReason.Unknown, CommonErrorCodes.Unknown,
@@ -54,6 +62,7 @@ namespace Unity.Services.Analytics.Internal
                 }
 
                 return response;
+#endif
             }
             catch (Exception)
             {

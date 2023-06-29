@@ -11,22 +11,26 @@ namespace Unity.Services.Analytics
         /// <param name="adImpressionParameters">(Required) Helper object to handle arguments.</param>
         public void AdImpression(AdImpressionParameters adImpressionParameters)
         {
-            if (!ServiceEnabled)
+            if (m_IsActive)
             {
-                return;
-            }
+                if (String.IsNullOrEmpty(adImpressionParameters.PlacementID))
+                {
+                    Debug.LogError("Required to have a value for placementID.");
+                }
 
-            if (string.IsNullOrEmpty(adImpressionParameters.PlacementID))
+                if (String.IsNullOrEmpty(adImpressionParameters.PlacementName))
+                {
+                    Debug.LogError("Required to have a value for placementName.");
+                }
+
+                m_DataGenerator.AdImpression(DateTime.Now, m_CommonParams, "com.unity.services.analytics.events.adimpression", adImpressionParameters);
+            }
+#if UNITY_ANALYTICS_EVENT_LOGS
+            else
             {
-                Debug.LogError("Required to have a value for placementID.");
+                Debug.Log("Did not record adImpression event because player has not opted in.");
             }
-
-            if (string.IsNullOrEmpty(adImpressionParameters.PlacementName))
-            {
-                Debug.LogError("Required to have a value for placementName.");
-            }
-
-            m_DataGenerator.AdImpression(DateTime.Now, m_CommonParams, "com.unity.services.analytics.events.adimpression", adImpressionParameters);
+#endif
         }
     }
 }

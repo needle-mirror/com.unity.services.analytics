@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 using Unity.Services.Analytics;
 using Unity.Services.Analytics.Data;
@@ -12,6 +13,8 @@ using UnityEngine;
 
 class Ua2CoreInitializeCallback : IInitializablePackage
 {
+    const string k_CollectUrlPattern = "https://collect.analytics.unity3d.com/api/analytics/collect/v2/projects/{0}/environments/{1}";
+
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     static void Register()
     {
@@ -36,44 +39,49 @@ class Ua2CoreInitializeCallback : IInitializablePackage
         var coreStatsHelper = new CoreStatsHelper();
         var consentTracker = new ConsentTracker(coreStatsHelper);
 
+        string projectId = cloudProjectId?.GetCloudProjectId() ?? Application.cloudProjectId;
+        string collectUrl = String.Format(k_CollectUrlPattern, projectId, environments.Current.ToLowerInvariant());
+
         var buffer = new BufferX(new BufferSystemCalls(), new DiskCache(new FileSystemCalls()));
+
+        var containerObject = AnalyticsContainer.CreateContainer();
+        var webRequestHelper = new WebRequestHelper();
+        var dispatcher = new Dispatcher(webRequestHelper, collectUrl);
 
         AnalyticsService.internalInstance = new AnalyticsServiceInstance(
             new DataGenerator(),
             buffer,
-            new BufferRevoked(),
             coreStatsHelper,
             consentTracker,
-            new Dispatcher(new WebRequestHelper(), consentTracker),
-            new AnalyticsForgetter(consentTracker),
-            cloudProjectId,
+            dispatcher,
+            new AnalyticsForgetter(collectUrl, new PlayerPrefsPersistence(), webRequestHelper),
             installationId,
             playerId,
             environments.Current,
             customUserId,
-            new AnalyticsServiceSystemCalls());
+            new AnalyticsServiceSystemCalls(),
+            containerObject);
         buffer.InjectIds(AnalyticsService.internalInstance);
+        containerObject.Initialize(AnalyticsService.internalInstance);
+        AnalyticsService.internalInstance.ResumeDataDeletionIfNecessary();
 
         StandardEventServiceComponent standardEventComponent = new StandardEventServiceComponent(
             registry.GetServiceComponent<IProjectConfiguration>(),
             AnalyticsService.internalInstance);
         registry.RegisterServiceComponent<IAnalyticsStandardEventComponent>(standardEventComponent);
 
-        buffer.LoadFromDisk();
-
-        await AnalyticsService.internalInstance.Initialize();
+        AnalyticsUserIdServiceComponent userIdComponent = new AnalyticsUserIdServiceComponent(AnalyticsService.internalInstance);
+        registry.RegisterServiceComponent<IAnalyticsUserId>(userIdComponent);
 
 #if UNITY_ANALYTICS_DEVELOPMENT
-        Debug.LogFormat("Core Initialize Callback\nInstall ID: {0}\nPlayer ID: {1}\nCustom Analytics ID: {2}",
+        Debug.LogFormat("Core Initialize Callback\nCollect URL: {0}\nInstall ID: {1}\nPlayer ID: {2}\nCustom Analytics ID: {3}",
+            collectUrl,
             installationId.GetOrCreateIdentifier(),
             playerId?.PlayerId,
             customUserId.UserId
         );
 #endif
 
-        if (consentTracker.IsGeoIpChecked())
-        {
-            AnalyticsService.internalInstance.Flush();
-        }
+        await Task.CompletedTask;
     }
 }

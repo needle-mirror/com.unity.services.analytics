@@ -7,84 +7,121 @@ namespace Unity.Services.Analytics.Internal
 {
     interface IAnalyticsForgetter
     {
-        void AttemptToForget(string collectUrl, string userId, string timestamp, string callingMethod, Action successfulUploadCallback);
+        bool DeletionInProgress { get; }
+        void ResetDataDeletionStatus();
+        void AttemptToForget(string userId, string installationId, string playerId, string timestamp, string callingMethod, Action successfulUploadCallback);
     }
 
     class AnalyticsForgetter : IAnalyticsForgetter
     {
-        string m_CollectUrl;
+        const string k_ForgottenStatusKey = "unity.services.analytics.data_deletion_status";
+
+        enum DataDeletionStatus
+        {
+            DataAllowed,
+            DeletionInProgress,
+            SuccessfullyDeleted
+        }
+
+        readonly string m_CollectUrl;
+        readonly IPersistence m_Persistence;
+        readonly IWebRequestHelper m_WebRequestHelper;
+
         byte[] m_Event;
         Action m_Callback;
 
-        bool m_SuccessfullyUploaded;
-        UnityWebRequestAsyncOperation m_Request;
-        readonly IConsentTracker ConsentTracker;
+        DataDeletionStatus m_DeletionStatus;
+        IWebRequest m_Request;
 
-        public AnalyticsForgetter(IConsentTracker consentTracker)
+        public bool DeletionInProgress
         {
-            ConsentTracker = consentTracker;
+            get { return m_DeletionStatus == DataDeletionStatus.DeletionInProgress; }
         }
 
-        public void AttemptToForget(string collectUrl, string userId, string timestamp, string callingMethod, Action successfulUploadCallback)
+        internal AnalyticsForgetter(string collectUrl, IPersistence persistence, IWebRequestHelper webRequestHelper)
         {
-            if (m_Request != null || m_SuccessfullyUploaded)
-            {
-                return;
-            }
-
             m_CollectUrl = collectUrl;
-            m_Callback = successfulUploadCallback;
+            m_Persistence = persistence;
+            m_WebRequestHelper = webRequestHelper;
 
-            // NOTE: we cannot use String.Format on JSON because it gets confused by all the {}s
-            var eventJson =
-                "{\"eventList\":[{" +
-                "\"eventName\":\"ddnaForgetMe\"," +
-                "\"userID\":\"" + userId + "\"," +
-                "\"eventUUID\":\"" + Guid.NewGuid().ToString() + "\"," +
-                "\"eventTimestamp\":\"" + timestamp + "\"," +
-                "\"eventVersion\":1," +
-                "\"eventParams\":{" +
-                "\"clientVersion\":\"" + Application.version + "\"," +
-                "\"sdkMethod\":\"" + callingMethod + "\"" +
-                "}}]}";
-
-            m_Event = Encoding.UTF8.GetBytes(eventJson);
-
-            var request = new UnityWebRequest(m_CollectUrl, UnityWebRequest.kHttpVerbPOST);
-            var upload = new UploadHandlerRaw(m_Event)
-            {
-                contentType = "application/json"
-            };
-            request.uploadHandler = upload;
-
-            if (ConsentTracker.IsGeoIpChecked() && ConsentTracker.IsOptingOutInProgress())
-            {
-                foreach (var header in ConsentTracker.requiredHeaders)
-                {
-                    request.SetRequestHeader(header.Key, header.Value);
-                }
-            }
-
-            m_Request = request.SendWebRequest();
-            m_Request.completed += UploadComplete;
+            m_DeletionStatus = (DataDeletionStatus)persistence.LoadValue(k_ForgottenStatusKey);
         }
 
-        void UploadComplete(AsyncOperation _)
+        public void ResetDataDeletionStatus()
         {
-            var code = m_Request.webRequest.responseCode;
+            SetForgettingStatus(DataDeletionStatus.DataAllowed);
+        }
 
-#if UNITY_2020_1_OR_NEWER
-            if (m_Request.webRequest.result == UnityWebRequest.Result.Success && code == 204)
-#else
-            if (!m_Request.webRequest.isNetworkError && code == 204)
-#endif
+        void SetForgettingStatus(DataDeletionStatus state)
+        {
+            m_DeletionStatus = state;
+            m_Persistence.SaveValue(k_ForgottenStatusKey, (int)state);
+        }
+
+        public void AttemptToForget(string userId, string installationId, string playerId, string timestamp, string callingMethod, Action successfulUploadCallback)
+        {
+            if (m_Request == null)
             {
-                m_SuccessfullyUploaded = true;
+#if UNITY_ANALYTICS_DEVELOPMENT
+                Debug.Log("Sending data deletion request...");
+#endif
+                SetForgettingStatus(DataDeletionStatus.DeletionInProgress);
+
+                m_Callback = successfulUploadCallback;
+
+                // NOTE: we cannot use String.Format on JSON because it gets confused by all the {}s
+                var eventJson =
+                    "{\"eventList\":[{" +
+                    "\"eventName\":\"ddnaForgetMe\"," +
+                    "\"userID\":\"" + userId + "\"," +
+                    "\"eventUUID\":\"" + Guid.NewGuid().ToString() + "\"," +
+                    "\"eventTimestamp\":\"" + timestamp + "\"," +
+                    "\"eventVersion\":1," +
+                    "\"unityInstallationID\":\"" + installationId + "\"," +
+                    (String.IsNullOrEmpty(playerId) ? "" : "\"unityPlayerID\":\"" + playerId + "\",") +
+                    "\"eventParams\":{" +
+                    "\"clientVersion\":\"" + Application.version + "\"," +
+                    "\"sdkMethod\":\"" + callingMethod + "\"" +
+                    "}}]}";
+
+                m_Event = Encoding.UTF8.GetBytes(eventJson);
+
+                m_Request = m_WebRequestHelper.CreateWebRequest(m_CollectUrl, UnityWebRequest.kHttpVerbPOST, m_Event);
+
+                m_Request.SetRequestHeader(Dispatcher.k_PiplExportHeaderKey, Dispatcher.k_HeaderTrueValue);
+                m_Request.SetRequestHeader(Dispatcher.k_PiplConsentHeaderKey, Dispatcher.k_HeaderTrueValue);
+
+                m_WebRequestHelper.SendWebRequest(m_Request, UploadComplete);
+            }
+#if UNITY_ANALYTICS_DEVELOPMENT
+            else
+            {
+                Debug.Log("Data deletion has already been successfully requested or completed. No need to upload the event again.");
+            }
+#endif
+        }
+
+        void UploadComplete(long code)
+        {
+            bool success = code >= 200 && code <= 299;
+
+            if (!m_Request.IsNetworkError && success)
+            {
+#if UNITY_ANALYTICS_DEVELOPMENT
+                Debug.Log("Data deletion request successfully uploaded!");
+#endif
+                SetForgettingStatus(DataDeletionStatus.SuccessfullyDeleted);
                 m_Callback();
             }
+#if UNITY_ANALYTICS_DEVELOPMENT
+            else
+            {
+                Debug.Log("Data deletion request failed to upload.");
+            }
+#endif
 
             // Clear the request to allow another request to be sent.
-            m_Request.webRequest.Dispose();
+            m_Request.Dispose();
             m_Request = null;
         }
     }
