@@ -76,14 +76,12 @@ namespace Unity.Services.Analytics
                         null);
                 }
 
-                if (consent == false)
+                if (!consent &&
+                    m_ConsentTracker.IsConsentGiven(identifier))
                 {
-                    if (m_ConsentTracker.IsConsentGiven(identifier))
-                    {
-                        m_ConsentTracker.BeginOptOutProcess(identifier);
-                        RevokeWithForgetEvent();
-                        return;
-                    }
+                    m_ConsentTracker.BeginOptOutProcess(identifier);
+                    RevokeWithForgetEvent();
+                    return;
                 }
 
                 m_ConsentTracker.SetUserConsentStatus(identifier, consent);
@@ -102,7 +100,7 @@ namespace Unity.Services.Analytics
         {
             if (m_ConsentFlow == ConsentFlow.New)
             {
-                throw new NotSupportedException("The OptOut() method cannot be used under the new consent flow. Please see the migration guide for more information: https://docs.unity.com/analytics/en/manual/AnalyticsSDK5MigrationGuide");
+                throw new NotSupportedException("The OptOut() method cannot be used under the new consent flow. Please see the migration guide for more information: https://docs.unity.com/ugs/en-us/manual/analytics/manual/sdk5-migration-guide");
             }
             else
             {
@@ -134,7 +132,7 @@ namespace Unity.Services.Analytics
 
         internal void RevokeWithForgetEvent()
         {
-            m_AnalyticsForgetter.AttemptToForget(UserId, InstallId, PlayerId, BufferX.SerializeDateTime(DateTime.Now), k_ForgetCallingId, OldForgetMeEventUploaded);
+            m_AnalyticsForgetter.AttemptToForget(m_UserIdentity.UserId, m_UserIdentity.InstallId, m_UserIdentity.PlayerId, BufferX.SerializeDateTime(DateTime.Now), k_ForgetCallingId, OldForgetMeEventUploaded);
 
             Deactivate();
         }

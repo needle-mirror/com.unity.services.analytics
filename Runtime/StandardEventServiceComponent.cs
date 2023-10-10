@@ -20,7 +20,7 @@ namespace Unity.Services.Analytics.Internal
             string packageVersion = m_Configuration.GetString($"{packageName}.version");
             string callerIdentifier = $"{packageName}@{packageVersion}";
 
-            m_AnalyticsService.CustomData(eventName, eventParameters, eventVersion, true, true, callerIdentifier);
+            m_AnalyticsService.CustomData(eventName, eventParameters, eventVersion, true, callerIdentifier);
         }
     }
 }

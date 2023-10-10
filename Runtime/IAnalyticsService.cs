@@ -31,8 +31,8 @@ namespace Unity.Services.Analytics
         /// <summary>
         /// Record a transaction event, if the player has opted in to data collection (see OptIn method).
         /// </summary>
-        /// <param name="transactionParameters">(Required) Helper object to handle parameters.</param>
-        void Transaction(TransactionParameters transactionParameters);
+        /// <param name="parameters">(Required) Helper object to handle parameters.</param>
+        void Transaction(TransactionParameters parameters);
 
         /// <summary>
         /// Record a transactionFailed event, if the player has opted in to data collection.
@@ -76,7 +76,7 @@ namespace Unity.Services.Analytics
         /// </summary>
         /// <returns>A list of consent identifiers that are required for sending analytics events.</returns>
         /// <exception cref="ConsentCheckException">Thrown if the GeoIP call was unsuccessful.</exception>
-        [Obsolete("This method is part of the old consent flow and should no longer be used. For more information, please see the migration guide: https://docs.unity.com/analytics/en/manual/AnalyticsSDK5MigrationGuide")]
+        [Obsolete("This method is part of the old consent flow and should no longer be used. For more information, please see the migration guide: https://docs.unity.com/ugs/en-us/manual/analytics/manual/sdk5-migration-guide")]
         Task<List<string>> CheckForRequiredConsents();
 
         /// <summary>
@@ -90,7 +90,7 @@ namespace Unity.Services.Analytics
         /// <param name="consent">The consent status which should be set for the specified legislation.</param>
         /// <exception cref="ConsentCheckException">Thrown if the incorrect legislation was being provided or
         /// the required consent flow cannot be determined.</exception>
-        [Obsolete("This method is part of the old consent flow and should no longer be used. For more information, please see the migration guide: https://docs.unity.com/analytics/en/manual/AnalyticsSDK5MigrationGuide")]
+        [Obsolete("This method is part of the old consent flow and should no longer be used. For more information, please see the migration guide: https://docs.unity.com/ugs/en-us/manual/analytics/manual/sdk5-migration-guide")]
         void ProvideOptInConsent(string identifier, bool consent);
 
         /// <summary>
@@ -100,7 +100,7 @@ namespace Unity.Services.Analytics
         /// until successful upload is confirmed. This status is mainted between sessions to ensure that the signal will be uploaded
         /// eventually.
         /// </summary>
-        [Obsolete("This method is part of the old consent flow and should no longer be used. Please use StopDataCollection() and/or RequestDataDeletion() instead as appropriate. For more information, please see the migration guide: https://docs.unity.com/analytics/en/manual/AnalyticsSDK5MigrationGuide")]
+        [Obsolete("This method is part of the old consent flow and should no longer be used. Please use StopDataCollection() and/or RequestDataDeletion() instead as appropriate. For more information, please see the migration guide: https://docs.unity.com/ugs/en-us/manual/analytics/manual/sdk5-migration-guide")]
         void OptOut();
 
         /// <summary>
@@ -150,7 +150,7 @@ namespace Unity.Services.Analytics
         /// }
         /// </code>
         /// </example>
-        [Obsolete("This method is part of the old consent flow and should no longer be used. For more information, please see the migration guide: https://docs.unity.com/analytics/en/manual/AnalyticsSDK5MigrationGuide")]
+        [Obsolete("This method is part of the old consent flow and should no longer be used. For more information, please see the migration guide: https://docs.unity.com/ugs/en-us/manual/analytics/manual/sdk5-migration-guide")]
         Task SetAnalyticsEnabled(bool enabled);
 
         /// <summary>

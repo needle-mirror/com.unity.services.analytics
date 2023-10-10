@@ -1,4 +1,4 @@
-
+using System;
 using UnityEngine;
 
 namespace Unity.Services.Analytics.Platform
@@ -11,6 +11,7 @@ namespace Unity.Services.Analytics.Platform
     // Likely this can be compile time to some degree.
     // https://docs.unity3d.com/ScriptReference/RuntimePlatform.html
     // https://docs.unity3d.com/Manual/PlatformDependentCompilation.html
+    [Obsolete("This now lives in StdGenerator")]
     enum UA2PlatformCode
     {
         UNKNOWN,
@@ -26,11 +27,10 @@ namespace Unity.Services.Analytics.Platform
         WIIU, SWITCH,
     }
 
+    [Obsolete("Should not be public. Do not use this.")]
     public static class Runtime
     {
-        /// <summary>
-        /// Returns the name of the platform this app is running on.
-        /// </summary>
+        [Obsolete("Should not be public. Do not use this.")]
         public static string Name()
         {
             return GetPlatform().ToString();

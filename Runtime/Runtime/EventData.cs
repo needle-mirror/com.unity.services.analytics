@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Unity.Services.Analytics.Platform;
@@ -5,6 +6,7 @@ using UnityEngine;
 
 namespace Unity.Services.Analytics.Internal
 {
+    [Obsolete("This mechanism is deprecated. Use AnalyticsService.Instance.CustomData(...) instead.")]
     public class EventData
     {
         internal EventData()

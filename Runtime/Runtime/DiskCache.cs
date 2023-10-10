@@ -41,10 +41,12 @@ namespace Unity.Services.Analytics.Internal
 
     internal class FileSystemCalls : IFileSystemCalls
     {
-        public bool CanAccessFileSystem()
+        readonly bool m_CanAccessFileSystem;
+
+        internal FileSystemCalls()
         {
-            // Switch requires a specific setup to have write access to the disc so it won't be handled here.
-            return
+            m_CanAccessFileSystem =
+                // Switch requires a specific setup to have write access to the disc so it won't be handled here.
                 Application.platform != RuntimePlatform.Switch &&
 #if !UNITY_2021_1_OR_NEWER
                 Application.platform != RuntimePlatform.XboxOne &&
@@ -56,6 +58,11 @@ namespace Unity.Services.Analytics.Internal
 #endif
                 Application.platform != RuntimePlatform.PS4 &&
                 !String.IsNullOrEmpty(Application.persistentDataPath);
+        }
+
+        public bool CanAccessFileSystem()
+        {
+            return m_CanAccessFileSystem;
         }
 
         public bool FileExists(string path)

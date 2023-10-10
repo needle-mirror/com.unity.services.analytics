@@ -27,13 +27,13 @@ namespace Unity.Services.Analytics.Internal
                 downloadHandler = new DownloadHandlerBuffer()
             };
 
-            var async = await new WebRequestTaskWrapper(request);
+            UnityWebRequestAsyncOperation asyncOperation = await new WebRequestTaskWrapper(request);
 
 #if UNITY_2020_1_OR_NEWER
-            if (async.webRequest.result == UnityWebRequest.Result.ProtocolError ||
-                async.webRequest.result == UnityWebRequest.Result.ConnectionError)
+            if (asyncOperation.webRequest.result == UnityWebRequest.Result.ProtocolError ||
+                asyncOperation.webRequest.result == UnityWebRequest.Result.ConnectionError)
 #else
-            if (async.webRequest.isHttpError || async.webRequest.isNetworkError)
+            if (asyncOperation.webRequest.isHttpError || asyncOperation.webRequest.isNetworkError)
 #endif
             {
                 throw new ConsentCheckException(ConsentCheckExceptionReason.NoInternetConnection,
@@ -53,7 +53,7 @@ namespace Unity.Services.Analytics.Internal
                     region = ""
                 };
 #else
-                var response = JsonUtility.FromJson<GeoIPResponse>(async.webRequest.downloadHandler.text);
+                var response = JsonUtility.FromJson<GeoIPResponse>(asyncOperation.webRequest.downloadHandler.text);
                 if (response == null)
                 {
                     throw new ConsentCheckException(ConsentCheckExceptionReason.Unknown, CommonErrorCodes.Unknown,

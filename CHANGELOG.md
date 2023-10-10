@@ -4,11 +4,28 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [5.0.1] - 2023-10-10
+
+### Fixed
+
+* batteryLoad and deviceVolume values are no longer stale when included in some events
+* Unity Player ID is no longer included twice in some events
+* The Configure button in Unity Package Manager now correctly leads to the Analytics - Gaming Services page in Project Settings
+* ClearBuffer(...) no longer throws ArgumentException if a player requests data deletion while an event batch upload is in progress
+
+### Improved
+
+* Recording event timestamp and integer values is now slightly faster and generates fewer memory allocations
+
+### Changed
+
+* The `PrivacyUrl` property now returns a link to the latest Game Player and App User Privacy Policy page, https://unity.com/legal/game-player-and-app-user-privacy-policy
+
 ## [5.0.0] - 2023-06-29
 
 ### Added
 
-* New initialization and consent flow. Please see the migration guide for more information: https://docs.unity.com/analytics/en/manual/AnalyticsSDK5MigrationGuide
+* New initialization and consent flow. Please see the migration guide for more information: https://docs.unity.com/ugs/en-us/manual/analytics/manual/sdk5-migration-guide
 
 ### Deprecated
 

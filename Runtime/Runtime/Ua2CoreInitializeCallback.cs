@@ -38,30 +38,31 @@ class Ua2CoreInitializeCallback : IInitializablePackage
 
         var coreStatsHelper = new CoreStatsHelper();
         var consentTracker = new ConsentTracker(coreStatsHelper);
+        var persistence = new PlayerPrefsPersistence();
+        var userIdentity = new IdentityManager(installationId, playerId, customUserId, persistence);
+        var session = new SessionManager();
 
         string projectId = cloudProjectId?.GetCloudProjectId() ?? Application.cloudProjectId;
         string collectUrl = String.Format(k_CollectUrlPattern, projectId, environments.Current.ToLowerInvariant());
 
-        var buffer = new BufferX(new BufferSystemCalls(), new DiskCache(new FileSystemCalls()));
+        var buffer = new BufferX(new BufferSystemCalls(), new DiskCache(new FileSystemCalls()), userIdentity, session);
 
         var containerObject = AnalyticsContainer.CreateContainer();
         var webRequestHelper = new WebRequestHelper();
         var dispatcher = new Dispatcher(webRequestHelper, collectUrl);
 
         AnalyticsService.internalInstance = new AnalyticsServiceInstance(
-            new DataGenerator(),
+            new DataGenerator(buffer, new CommonDataWrapper(projectId), new DeviceDataWrapper()),
             buffer,
             coreStatsHelper,
             consentTracker,
             dispatcher,
-            new AnalyticsForgetter(collectUrl, new PlayerPrefsPersistence(), webRequestHelper),
-            installationId,
-            playerId,
+            new AnalyticsForgetter(collectUrl, persistence, webRequestHelper),
+            userIdentity,
             environments.Current,
-            customUserId,
             new AnalyticsServiceSystemCalls(),
-            containerObject);
-        buffer.InjectIds(AnalyticsService.internalInstance);
+            containerObject,
+            session);
         containerObject.Initialize(AnalyticsService.internalInstance);
         AnalyticsService.internalInstance.ResumeDataDeletionIfNecessary();
 

@@ -3,13 +3,12 @@ using UnityEngine.Networking;
 
 namespace Unity.Services.Analytics.Internal
 {
-    interface IWebRequest
+    interface IWebRequest : IDisposable
     {
         UnityWebRequestAsyncOperation SendWebRequest();
         UploadHandler uploadHandler { get; set; }
         void SetRequestHeader(string key, string value);
         bool IsNetworkError { get; }
-        void Dispose();
     }
 
     interface IWebRequestHelper

@@ -5,7 +5,10 @@ namespace Unity.Services.Analytics.Internal
     internal interface IPersistence
     {
         void SaveValue(string key, int value);
-        int LoadValue(string key);
+        void SaveValue(string key, string value);
+
+        int LoadInt(string key);
+        string LoadString(string key);
     }
 
     internal class PlayerPrefsPersistence : IPersistence
@@ -20,7 +23,13 @@ namespace Unity.Services.Analytics.Internal
             PlayerPrefs.Save();
         }
 
-        public int LoadValue(string key)
+        public void SaveValue(string key, string value)
+        {
+            PlayerPrefs.SetString(key, value);
+            PlayerPrefs.Save();
+        }
+
+        public int LoadInt(string key)
         {
             if (PlayerPrefs.HasKey(key))
             {
@@ -29,6 +38,18 @@ namespace Unity.Services.Analytics.Internal
             else
             {
                 return 0;
+            }
+        }
+
+        public string LoadString(string key)
+        {
+            if (PlayerPrefs.HasKey(key))
+            {
+                return PlayerPrefs.GetString(key);
+            }
+            else
+            {
+                return null;
             }
         }
     }

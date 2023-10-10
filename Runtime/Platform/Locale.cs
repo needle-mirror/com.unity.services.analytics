@@ -34,7 +34,7 @@ namespace Unity.Services.Analytics.Internal
         }
 
 #endif
-        public static string AnalyticsRegionLanguageCode()
+        internal static string AnalyticsRegionLanguageCode()
         {
             // As we can't reliably report current country code (as the only country code we have access to is the region settings,
             // not the user's current country as expected by the Analytics service) then we return ZZ to have the Analytics service

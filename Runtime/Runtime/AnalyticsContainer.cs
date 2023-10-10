@@ -1,4 +1,3 @@
-using System;
 using UnityEngine;
 
 namespace Unity.Services.Analytics
@@ -113,6 +112,11 @@ namespace Unity.Services.Analytics
 
             m_Service.ApplicationQuit();
 
+            CleanUp();
+        }
+
+        static void CleanUp()
+        {
             s_Container = null;
             s_Created = false;
         }

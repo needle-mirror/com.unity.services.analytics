@@ -27,7 +27,6 @@ namespace Unity.Services.Analytics.Internal
         readonly IPersistence m_Persistence;
         readonly IWebRequestHelper m_WebRequestHelper;
 
-        byte[] m_Event;
         Action m_Callback;
 
         DataDeletionStatus m_DeletionStatus;
@@ -44,7 +43,7 @@ namespace Unity.Services.Analytics.Internal
             m_Persistence = persistence;
             m_WebRequestHelper = webRequestHelper;
 
-            m_DeletionStatus = (DataDeletionStatus)persistence.LoadValue(k_ForgottenStatusKey);
+            m_DeletionStatus = (DataDeletionStatus)persistence.LoadInt(k_ForgottenStatusKey);
         }
 
         public void ResetDataDeletionStatus()
@@ -84,9 +83,9 @@ namespace Unity.Services.Analytics.Internal
                     "\"sdkMethod\":\"" + callingMethod + "\"" +
                     "}}]}";
 
-                m_Event = Encoding.UTF8.GetBytes(eventJson);
+                byte[] payload = Encoding.UTF8.GetBytes(eventJson);
 
-                m_Request = m_WebRequestHelper.CreateWebRequest(m_CollectUrl, UnityWebRequest.kHttpVerbPOST, m_Event);
+                m_Request = m_WebRequestHelper.CreateWebRequest(m_CollectUrl, UnityWebRequest.kHttpVerbPOST, payload);
 
                 m_Request.SetRequestHeader(Dispatcher.k_PiplExportHeaderKey, Dispatcher.k_HeaderTrueValue);
                 m_Request.SetRequestHeader(Dispatcher.k_PiplConsentHeaderKey, Dispatcher.k_HeaderTrueValue);

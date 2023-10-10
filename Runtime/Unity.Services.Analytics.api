@@ -19,21 +19,20 @@ namespace Unity.Services.Analytics
 
     public enum AdCompletionStatus
     {
-        public const Unity.Services.Analytics.AdCompletionStatus Completed = 0;
-        public const Unity.Services.Analytics.AdCompletionStatus Incomplete = 2;
-        public const Unity.Services.Analytics.AdCompletionStatus Partial = 1;
-        public int value__;
+        Completed = 0,
+        Incomplete = 2,
+        Partial = 1,
     }
 
     public struct AdImpressionParameters
     {
-        public Unity.Services.Analytics.AdCompletionStatus AdCompletionStatus;
+        public AdCompletionStatus AdCompletionStatus;
         public System.Nullable<double> AdEcpmUsd;
         public System.Nullable<bool> AdHasClicked;
         public string AdImpressionID;
         public System.Nullable<long> AdLengthMs;
         public string AdMediaType;
-        public Unity.Services.Analytics.AdProvider AdProvider;
+        public AdProvider AdProvider;
         public string AdSource;
         public string AdStatusCallback;
         public string AdStoreDstID;
@@ -41,82 +40,79 @@ namespace Unity.Services.Analytics
         public System.Nullable<long> AdTimeWatchedMs;
         public string PlacementID;
         public string PlacementName;
-        public System.Nullable<Unity.Services.Analytics.AdPlacementType> PlacementType;
+        public System.Nullable<AdPlacementType> PlacementType;
         public string SdkVersion;
     }
 
     public enum AdPlacementType
     {
-        public const Unity.Services.Analytics.AdPlacementType BANNER = 0;
-        public const Unity.Services.Analytics.AdPlacementType INTERSTITIAL = 2;
-        public const Unity.Services.Analytics.AdPlacementType OTHER = 3;
-        public const Unity.Services.Analytics.AdPlacementType REWARDED = 1;
-        public int value__;
+        BANNER = 0,
+        INTERSTITIAL = 2,
+        OTHER = 3,
+        REWARDED = 1,
     }
 
     public enum AdProvider
     {
-        public const Unity.Services.Analytics.AdProvider AdColony = 0;
-        public const Unity.Services.Analytics.AdProvider AdMob = 1;
-        public const Unity.Services.Analytics.AdProvider Amazon = 2;
-        public const Unity.Services.Analytics.AdProvider AppLovin = 3;
-        public const Unity.Services.Analytics.AdProvider ChartBoost = 4;
-        public const Unity.Services.Analytics.AdProvider Facebook = 5;
-        public const Unity.Services.Analytics.AdProvider Fyber = 6;
-        public const Unity.Services.Analytics.AdProvider Hyprmx = 7;
-        public const Unity.Services.Analytics.AdProvider Inmobi = 8;
-        public const Unity.Services.Analytics.AdProvider IrnSource = 14;
-        public const Unity.Services.Analytics.AdProvider Maio = 9;
-        public const Unity.Services.Analytics.AdProvider Other = 15;
-        public const Unity.Services.Analytics.AdProvider Pangle = 10;
-        public const Unity.Services.Analytics.AdProvider Tapjoy = 11;
-        public const Unity.Services.Analytics.AdProvider UnityAds = 12;
-        public int value__;
-        public const Unity.Services.Analytics.AdProvider Vungle = 13;
+        AdColony = 0,
+        AdMob = 1,
+        Amazon = 2,
+        AppLovin = 3,
+        ChartBoost = 4,
+        Facebook = 5,
+        Fyber = 6,
+        Hyprmx = 7,
+        Inmobi = 8,
+        IrnSource = 14,
+        Maio = 9,
+        Other = 15,
+        Pangle = 10,
+        Tapjoy = 11,
+        UnityAds = 12,
+        Vungle = 13,
     }
 
     public static class AnalyticsService
     {
-        public static Unity.Services.Analytics.IAnalyticsService Instance { get; }
+        public static IAnalyticsService Instance { get; }
     }
 
     public class ConsentCheckException : Unity.Services.Core.RequestFailedException
     {
-        [UnityEngine.Scripting.Preserve] public Unity.Services.Analytics.ConsentCheckExceptionReason Reason { get; }
-        public ConsentCheckException(Unity.Services.Analytics.ConsentCheckExceptionReason reason, int errorCode, string message, System.Exception innerException) {}
+        [UnityEngine.Scripting.Preserve] public ConsentCheckExceptionReason Reason { get; }
+        public ConsentCheckException(ConsentCheckExceptionReason reason, int errorCode, string message, System.Exception innerException) {}
     }
 
     [UnityEngine.Scripting.Preserve] public enum ConsentCheckExceptionReason
     {
-        public const Unity.Services.Analytics.ConsentCheckExceptionReason ConsentFlowNotKnown = 4;
-        public const Unity.Services.Analytics.ConsentCheckExceptionReason DeserializationIssue = 1;
-        public const Unity.Services.Analytics.ConsentCheckExceptionReason InvalidConsentFlow = 3;
-        public const Unity.Services.Analytics.ConsentCheckExceptionReason NoInternetConnection = 2;
-        public const Unity.Services.Analytics.ConsentCheckExceptionReason Unknown = 0;
-        public int value__;
+        ConsentFlowNotKnown = 4,
+        DeserializationIssue = 1,
+        InvalidConsentFlow = 3,
+        NoInternetConnection = 2,
+        Unknown = 0,
     }
 
     public interface IAnalyticsService
     {
-        public abstract string PrivacyUrl { get; }
-        public abstract string SessionID { get; }
-        public abstract void AcquisitionSource(Unity.Services.Analytics.AcquisitionSourceParameters acquisitionSourceParameters);
-        public abstract void AdImpression(Unity.Services.Analytics.AdImpressionParameters parameters);
-        [System.Obsolete(@"This method is part of the old consent flow and should no longer be used. For more information, please see the migration guide: https://docs.unity.com/analytics/en/manual/AnalyticsSDK5MigrationGuide")] public abstract System.Threading.Tasks.Task<System.Collections.Generic.List<string>> CheckForRequiredConsents();
-        public abstract long ConvertCurrencyToMinorUnits(string currencyCode, double value);
-        public abstract void CustomData(string eventName);
-        public abstract void CustomData(string eventName, System.Collections.Generic.IDictionary<string, object> eventParams);
-        public abstract void Flush();
-        public abstract string GetAnalyticsUserID();
-        [System.Obsolete(@"This method is part of the old consent flow and should no longer be used. Please use StopDataCollection() and/or RequestDataDeletion() instead as appropriate. For more information, please see the migration guide: https://docs.unity.com/analytics/en/manual/AnalyticsSDK5MigrationGuide")] public abstract void OptOut();
-        [System.Obsolete(@"This method is part of the old consent flow and should no longer be used. For more information, please see the migration guide: https://docs.unity.com/analytics/en/manual/AnalyticsSDK5MigrationGuide")] public abstract void ProvideOptInConsent(string identifier, bool consent);
-        [System.Obsolete(@"This mechanism is no longer supported and will be removed in a future version. Use the new Core IAnalyticsStandardEventComponent API instead.")] public abstract void RecordInternalEvent(Unity.Services.Analytics.Internal.Event eventToRecord);
-        public abstract void RequestDataDeletion();
-        [System.Obsolete(@"This method is part of the old consent flow and should no longer be used. For more information, please see the migration guide: https://docs.unity.com/analytics/en/manual/AnalyticsSDK5MigrationGuide")] public abstract System.Threading.Tasks.Task SetAnalyticsEnabled(bool enabled);
-        public abstract void StartDataCollection();
-        public abstract void StopDataCollection();
-        public abstract void Transaction(Unity.Services.Analytics.TransactionParameters transactionParameters);
-        public abstract void TransactionFailed(Unity.Services.Analytics.TransactionFailedParameters parameters);
+        public string PrivacyUrl { get; }
+        public string SessionID { get; }
+        public void AcquisitionSource(AcquisitionSourceParameters acquisitionSourceParameters);
+        public void AdImpression(AdImpressionParameters parameters);
+        [System.Obsolete(@"This method is part of the old consent flow and should no longer be used. For more information, please see the migration guide: https://docs.unity.com/ugs/en-us/manual/analytics/manual/sdk5-migration-guide")] public System.Threading.Tasks.Task<System.Collections.Generic.List<string>> CheckForRequiredConsents();
+        public long ConvertCurrencyToMinorUnits(string currencyCode, double value);
+        public void CustomData(string eventName);
+        public void CustomData(string eventName, System.Collections.Generic.IDictionary<string, object> eventParams);
+        public void Flush();
+        public string GetAnalyticsUserID();
+        [System.Obsolete(@"This method is part of the old consent flow and should no longer be used. Please use StopDataCollection() and/or RequestDataDeletion() instead as appropriate. For more information, please see the migration guide: https://docs.unity.com/ugs/en-us/manual/analytics/manual/sdk5-migration-guide")] public void OptOut();
+        [System.Obsolete(@"This method is part of the old consent flow and should no longer be used. For more information, please see the migration guide: https://docs.unity.com/ugs/en-us/manual/analytics/manual/sdk5-migration-guide")] public void ProvideOptInConsent(string identifier, bool consent);
+        [System.Obsolete(@"This mechanism is no longer supported and will be removed in a future version. Use the new Core IAnalyticsStandardEventComponent API instead.")] public void RecordInternalEvent(Internal.Event eventToRecord);
+        public void RequestDataDeletion();
+        [System.Obsolete(@"This method is part of the old consent flow and should no longer be used. For more information, please see the migration guide: https://docs.unity.com/ugs/en-us/manual/analytics/manual/sdk5-migration-guide")] public System.Threading.Tasks.Task SetAnalyticsEnabled(bool enabled);
+        public void StartDataCollection();
+        public void StopDataCollection();
+        public void Transaction(TransactionParameters parameters);
+        public void TransactionFailed(TransactionFailedParameters parameters);
     }
 
     public struct Item
@@ -128,9 +124,9 @@ namespace Unity.Services.Analytics
 
     public struct Product
     {
-        public System.Collections.Generic.List<Unity.Services.Analytics.Item> Items;
-        public System.Nullable<Unity.Services.Analytics.RealCurrency> RealCurrency;
-        public System.Collections.Generic.List<Unity.Services.Analytics.VirtualCurrency> VirtualCurrencies;
+        public System.Collections.Generic.List<Item> Items;
+        public System.Nullable<RealCurrency> RealCurrency;
+        public System.Collections.Generic.List<VirtualCurrency> VirtualCurrencies;
     }
 
     public struct RealCurrency
@@ -141,7 +137,7 @@ namespace Unity.Services.Analytics
 
     public static class SdkVersion
     {
-        public static readonly string SDK_VERSION;
+        public static readonly string SDK_VERSION = @"5.0.1";
     }
 
     public struct TransactionFailedParameters
@@ -153,8 +149,8 @@ namespace Unity.Services.Analytics
         public System.Nullable<bool> IsInitiator;
         public string PaymentCountry;
         public string ProductID;
-        public Unity.Services.Analytics.Product ProductsReceived;
-        public Unity.Services.Analytics.Product ProductsSpent;
+        public Product ProductsReceived;
+        public Product ProductsSpent;
         public System.Nullable<long> RevenueValidated;
         public string StoreID;
         public string StoreItemID;
@@ -162,16 +158,16 @@ namespace Unity.Services.Analytics
         public string StoreSourceID;
         public string TransactionID;
         public string TransactionName;
-        public System.Nullable<Unity.Services.Analytics.TransactionServer> TransactionServer;
-        public Unity.Services.Analytics.TransactionType TransactionType;
+        public System.Nullable<TransactionServer> TransactionServer;
+        public TransactionType TransactionType;
     }
 
     public struct TransactionParameters
     {
         public string PaymentCountry;
         public string ProductID;
-        public Unity.Services.Analytics.Product ProductsReceived;
-        public Unity.Services.Analytics.Product ProductsSpent;
+        public Product ProductsReceived;
+        public Product ProductsSpent;
         public System.Nullable<long> RevenueValidated;
         public string StoreID;
         public string StoreItemID;
@@ -181,41 +177,38 @@ namespace Unity.Services.Analytics
         public string TransactionName;
         public string TransactionReceipt;
         public string TransactionReceiptSignature;
-        public System.Nullable<Unity.Services.Analytics.TransactionServer> TransactionServer;
-        public Unity.Services.Analytics.TransactionType TransactionType;
+        public System.Nullable<TransactionServer> TransactionServer;
+        public TransactionType TransactionType;
         public string TransactorID;
     }
 
     public enum TransactionServer
     {
-        public const Unity.Services.Analytics.TransactionServer AMAZON = 1;
-        public const Unity.Services.Analytics.TransactionServer APPLE = 0;
-        public const Unity.Services.Analytics.TransactionServer GOOGLE = 2;
-        public int value__;
+        AMAZON = 1,
+        APPLE = 0,
+        GOOGLE = 2,
     }
 
     public enum TransactionType
     {
-        public const Unity.Services.Analytics.TransactionType INVALID = 0;
-        public const Unity.Services.Analytics.TransactionType PURCHASE = 2;
-        public const Unity.Services.Analytics.TransactionType SALE = 1;
-        public const Unity.Services.Analytics.TransactionType TRADE = 3;
-        public int value__;
+        INVALID = 0,
+        PURCHASE = 2,
+        SALE = 1,
+        TRADE = 3,
     }
 
     public struct VirtualCurrency
     {
         public long VirtualCurrencyAmount;
         public string VirtualCurrencyName;
-        public Unity.Services.Analytics.VirtualCurrencyType VirtualCurrencyType;
+        public VirtualCurrencyType VirtualCurrencyType;
     }
 
     public enum VirtualCurrencyType
     {
-        public const Unity.Services.Analytics.VirtualCurrencyType GRIND = 0;
-        public const Unity.Services.Analytics.VirtualCurrencyType PREMIUM = 1;
-        public const Unity.Services.Analytics.VirtualCurrencyType PREMIUM_GRIND = 2;
-        public int value__;
+        GRIND = 0,
+        PREMIUM = 1,
+        PREMIUM_GRIND = 2,
     }
 }
 
@@ -224,12 +217,12 @@ namespace Unity.Services.Analytics.Internal
     [System.Obsolete(@"This mechanism is no longer supported and will be removed in a future version. Use the new Core IAnalyticsStandardEventComponent API instead.")] public class Event
     {
         public string Name { get; }
-        public Unity.Services.Analytics.Internal.EventData Parameters { get; }
+        public EventData Parameters { get; }
         public System.Nullable<int> Version { get; }
         public Event(string name, System.Nullable<int> version) {}
     }
 
-    public class EventData
+    [System.Obsolete(@"This mechanism is deprecated. Use AnalyticsService.Instance.CustomData(...) instead.")] public class EventData
     {
         public System.Collections.Generic.Dictionary<string, object> Data { get; }
         public void AddBatteryLoad();
@@ -252,16 +245,16 @@ namespace Unity.Services.Analytics.Internal
 
 namespace Unity.Services.Analytics.Internal.Platform
 {
-    public static class UserCountry
+    [System.Obsolete(@"This should not be public. Do not use it.")] public static class UserCountry
     {
-        public static string Name();
+        [System.Obsolete(@"This should not be public. Do not use it.")] public static string Name();
     }
 }
 
 namespace Unity.Services.Analytics.Platform
 {
-    public static class Runtime
+    [System.Obsolete(@"Should not be public. Do not use this.")] public static class Runtime
     {
-        public static string Name();
+        [System.Obsolete(@"Should not be public. Do not use this.")] public static string Name();
     }
 }
