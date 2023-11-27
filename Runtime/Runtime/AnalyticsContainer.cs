@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 namespace Unity.Services.Analytics
@@ -56,6 +57,8 @@ namespace Unity.Services.Analytics
 
                 DontDestroyOnLoad(s_Container);
                 s_Created = true;
+
+                Application.quitting += Instance.CleanUp;
             }
 
             return Instance;
@@ -104,19 +107,12 @@ namespace Unity.Services.Analytics
             m_Service.ApplicationPaused(paused);
         }
 
-        void OnDestroy()
+        void CleanUp()
         {
-            // NOTE: we use OnDestroy rather than OnApplicationQuit in case the game developer should
-            // deliberately/accidentally destroy the container object. This should ensure graceful shutdown
-            // of the SDK regardless of 'how' it actually got turned off.
+            Application.quitting -= Instance.CleanUp;
 
             m_Service.ApplicationQuit();
 
-            CleanUp();
-        }
-
-        static void CleanUp()
-        {
             s_Container = null;
             s_Created = false;
         }
