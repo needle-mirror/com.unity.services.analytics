@@ -1,15 +1,10 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Threading.Tasks;
 using Unity.Services.Analytics.Data;
 using Unity.Services.Analytics.Internal;
 using Unity.Services.Analytics.Platform;
-using Unity.Services.Authentication.Internal;
-using Unity.Services.Core.Configuration.Internal;
-using Unity.Services.Core.Device.Internal;
 using UnityEngine;
-using Event = Unity.Services.Analytics.Internal.Event;
 
 namespace Unity.Services.Analytics
 {
@@ -47,7 +42,8 @@ namespace Unity.Services.Analytics
         public string PrivacyUrl => "https://unity.com/legal/game-player-and-app-user-privacy-policy";
 
         const string k_ForgetCallingId = "com.unity.services.analytics.Events." + nameof(OptOut);
-        const string m_StartUpCallingId = "com.unity.services.analytics.Events.Startup";
+        const string k_StartUpCallingId = "com.unity.services.analytics.Events.Startup";
+        internal const string k_InvokedByUserCallingId = "com.unity.services.analytics.Events.UserInvoked";
 
         readonly TimeSpan k_BackgroundSessionRefreshPeriod = TimeSpan.FromMinutes(5);
         readonly TransactionCurrencyConverter converter = new TransactionCurrencyConverter();
@@ -265,8 +261,8 @@ namespace Unity.Services.Analytics
                 m_StartUpEventsRecorded = true;
 
                 // Startup Events.
-                m_DataGenerator.SdkStartup(m_StartUpCallingId);
-                m_DataGenerator.ClientDevice(m_StartUpCallingId);
+                m_DataGenerator.SdkStartup(k_StartUpCallingId);
+                m_DataGenerator.ClientDevice(k_StartUpCallingId);
 
 #if UNITY_DOTSRUNTIME
                 var isTiny = true;
@@ -274,11 +270,11 @@ namespace Unity.Services.Analytics
                 var isTiny = false;
 #endif
 
-                m_DataGenerator.GameStarted(m_StartUpCallingId, Application.buildGUID, SystemInfo.operatingSystem, isTiny, DebugDevice.IsDebugDevice(), Locale.AnalyticsRegionLanguageCode());
+                m_DataGenerator.GameStarted(k_StartUpCallingId, Application.buildGUID, SystemInfo.operatingSystem, isTiny, DebugDevice.IsDebugDevice(), Locale.AnalyticsRegionLanguageCode());
 
                 if (m_UserIdentity.IsNewPlayer)
                 {
-                    m_DataGenerator.NewPlayer(m_StartUpCallingId, SystemInfo.deviceModel);
+                    m_DataGenerator.NewPlayer(k_StartUpCallingId, SystemInfo.deviceModel);
                 }
             }
         }
@@ -351,7 +347,7 @@ namespace Unity.Services.Analytics
         }
 
         [Obsolete("This mechanism is no longer supported and will be removed in a future version. Use the new Core IAnalyticsStandardEventComponent API instead.")]
-        public void RecordInternalEvent(Event eventToRecord)
+        public void RecordInternalEvent(Internal.Event eventToRecord)
         {
             if (m_IsActive)
             {
@@ -389,6 +385,7 @@ namespace Unity.Services.Analytics
             }
         }
 
+        [Obsolete]
         public void AcquisitionSource(AcquisitionSourceParameters acquisitionSourceParameters)
         {
             if (m_IsActive)
@@ -403,6 +400,7 @@ namespace Unity.Services.Analytics
 #endif
         }
 
+        [Obsolete]
         public void AdImpression(AdImpressionParameters parameters)
         {
             if (m_IsActive)
@@ -417,6 +415,7 @@ namespace Unity.Services.Analytics
 #endif
         }
 
+        [Obsolete]
         public void Transaction(TransactionParameters parameters)
         {
             if (m_IsActive)
@@ -431,6 +430,7 @@ namespace Unity.Services.Analytics
 #endif
         }
 
+        [Obsolete]
         public void TransactionFailed(TransactionFailedParameters parameters)
         {
             if (m_IsActive)
@@ -492,6 +492,39 @@ namespace Unity.Services.Analytics
             else
             {
                 Debug.Log("Did not record custom event " + eventName + " because player has not opted in.");
+            }
+#endif
+        }
+
+        public void RecordEvent(string name)
+        {
+            if (m_IsActive)
+            {
+                m_DataGenerator.PushEmptyEvent(name);
+            }
+#if UNITY_ANALYTICS_EVENT_LOGS
+            else
+            {
+                Debug.Log("Did not record event " + name + " because player has not opted in.");
+            }
+#endif
+        }
+
+        public void RecordEvent(Event e)
+        {
+            RecordEvent(e, k_InvokedByUserCallingId);
+        }
+
+        internal void RecordEvent(Event e, string callingMethodIdentifier)
+        {
+            if (m_IsActive)
+            {
+                m_DataGenerator.PushEvent(callingMethodIdentifier, e);
+            }
+#if UNITY_ANALYTICS_EVENT_LOGS
+            else
+            {
+                Debug.Log("Did not record custom event " + e.Name + " because player has not opted in.");
             }
 #endif
         }

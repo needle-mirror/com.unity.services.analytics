@@ -338,7 +338,7 @@ namespace Unity.Services.Analytics.Internal
             PushCommonEventStart(name);
 
             WriteBytes(k_HeaderEventVersion);
-            WriteString(version.ToString());
+            WriteLong(version);
             WriteBytes(k_Comma);
 
             WriteBytes(k_HeaderInstallationID);
@@ -575,6 +575,7 @@ namespace Unity.Services.Analytics.Internal
             WriteBytes(k_QuoteComma);
         }
 
+        [Obsolete]
         public void PushProduct(string name, Product value)
         {
             PushObjectStart(name);
@@ -613,6 +614,48 @@ namespace Unity.Services.Analytics.Internal
                     PushString("itemName", item.ItemName);
                     PushString("itemType", item.ItemType);
                     PushInt64("itemAmount", item.ItemAmount);
+                    PushObjectEnd();
+                    PushObjectEnd();
+                }
+                PushArrayEnd();
+            }
+
+            PushObjectEnd();
+        }
+
+        public void PushProduct(string name, TransactionRealCurrency realCurrency, List<TransactionVirtualCurrency> virtualCurrencies, List<TransactionItem> items)
+        {
+            PushObjectStart(name);
+
+            if (realCurrency != null)
+            {
+                PushObjectStart("realCurrency");
+                realCurrency.Serialize(this);
+                PushObjectEnd();
+            }
+
+            if (virtualCurrencies.Count > 0)
+            {
+                PushArrayStart("virtualCurrencies");
+                foreach (TransactionVirtualCurrency virtualCurrency in virtualCurrencies)
+                {
+                    PushObjectStart(null);
+                    PushObjectStart("virtualCurrency");
+                    virtualCurrency.Serialize(this);
+                    PushObjectEnd();
+                    PushObjectEnd();
+                }
+                PushArrayEnd();
+            }
+
+            if (items.Count > 0)
+            {
+                PushArrayStart("items");
+                foreach (TransactionItem item in items)
+                {
+                    PushObjectStart(null);
+                    PushObjectStart("item");
+                    item.Serialize(this);
                     PushObjectEnd();
                     PushObjectEnd();
                 }

@@ -4,6 +4,7 @@ namespace Unity.Services.Analytics
     {
         APPLE = 0,
         AMAZON = 1,
-        GOOGLE = 2
+        GOOGLE = 2,
+        VALVE = 3
     }
 }

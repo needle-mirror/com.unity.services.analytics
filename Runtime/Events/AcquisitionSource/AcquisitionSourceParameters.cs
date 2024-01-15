@@ -1,5 +1,8 @@
+using System;
+
 namespace Unity.Services.Analytics
 {
+    [Obsolete("Please create an AcquisitionSourceEvent and use RecordEvent(...) instead.")]
     public class AcquisitionSourceParameters
     {
         /// <summary>

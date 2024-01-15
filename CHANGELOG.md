@@ -4,6 +4,30 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [5.1.0] - 2024-01-15
+
+### Added
+
+* New `RecordEvent(...)` API which takes an instance of the new `Unity.Services.Analytics.Event` class
+  * This enables you to codify custom event schemas in helper objects by making your own sub-classes of `Event`, to avoid the risks inherent in directly using plain dictionaries with string keys
+  * Event objects can also be pooled and reused because they are cleared immediately once their contents have been serialized
+  * A generic `CustomEvent` class is available which can be used in a flexible, dictionary-like way if you do not wish to make your own full sub-classes
+
+### Deprecated
+
+* Standard Event recording methods that take `...Parameters` helper structs are now deprecated. Please replace them with the new `Event` sub-classes and use the new `RecordEvent(...)` method.
+  * TransactionParameters -> TransactionEvent
+  * TransactionFailedParameters -> TransactionFailedEvent
+  * AdImpressionParameters -> AdImpressionEvent
+  * AcquisitionSourceParameters -> AcquisitionSourceEvent
+* CustomData(...) methods
+  * Use RecordEvent(string) for events with no parameters
+  * Use RecordEvent(event) for events with parameters, by using CustomEvent or creating your own sub-class of Event to contain the parameters
+
+### Improved
+
+* Improved the descriptions of some properties on the `AdImpressionParameters` class
+
 ## [5.0.2] - 2023-11-27
 
 ### Fixed

@@ -123,14 +123,20 @@ namespace Unity.Services.Analytics.Data
         void NewPlayer(string callingMethodIdentifier, string deviceModel);
         void GameStarted(string callingMethodIdentifier, string idLocalProject, string osVersion, bool isTiny, bool debugDevice, string userLocale);
         void GameEnded(string callingMethodIdentifier, DataGenerator.SessionEndState quitState);
-        void AdImpression(string callingMethodIdentifier,
-            AdImpressionParameters adImpressionParameters);
+        [Obsolete]
+        void AdImpression(string callingMethodIdentifier, AdImpressionParameters adImpressionParameters);
+        [Obsolete]
         void Transaction(string callingMethodIdentifier, TransactionParameters transactionParameters);
+        [Obsolete]
         void TransactionFailed(string callingMethodIdentifier, TransactionFailedParameters transactionParameters);
         void ClientDevice(string callingMethodIdentifier);
+        [Obsolete]
         void AcquisitionSource(string callingMethodIdentifier, AcquisitionSourceParameters acquisitionSourceParameters);
 
         void PushCommonParams(string callingMethodIdentifier);
+
+        void PushEvent(string callingMethodIdentifier, Event e);
+        void PushEmptyEvent(string name);
     }
 
     class DataGenerator : IDataGenerator
@@ -219,6 +225,7 @@ namespace Unity.Services.Analytics.Data
             m_Buffer.PushEndEvent();
         }
 
+        [Obsolete]
         public void AdImpression(string callingMethodIdentifier, AdImpressionParameters adImpressionParameters)
         {
             if (String.IsNullOrEmpty(adImpressionParameters.PlacementID))
@@ -303,6 +310,7 @@ namespace Unity.Services.Analytics.Data
             m_Buffer.PushEndEvent();
         }
 
+        [Obsolete]
         public void AcquisitionSource(string callingMethodIdentifier, AcquisitionSourceParameters acquisitionSourceParameters)
         {
             if (string.IsNullOrEmpty(acquisitionSourceParameters.Channel))
@@ -359,6 +367,7 @@ namespace Unity.Services.Analytics.Data
             m_Buffer.PushEndEvent();
         }
 
+        [Obsolete]
         public void Transaction(string callingMethodIdentifier, TransactionParameters transactionParameters)
         {
             if (String.IsNullOrEmpty(transactionParameters.TransactionName))
@@ -448,6 +457,7 @@ namespace Unity.Services.Analytics.Data
             m_Buffer.PushEndEvent();
         }
 
+        [Obsolete]
         public void TransactionFailed(string callingMethodIdentifier, TransactionFailedParameters parameters)
         {
             if (String.IsNullOrEmpty(parameters.TransactionName))
@@ -609,6 +619,34 @@ namespace Unity.Services.Analytics.Data
             {
                 m_Buffer.PushString("projectID", m_CommonData.ProjectId);
             }
+        }
+
+        public void PushEvent(string callingMethodIdentifier, Event e)
+        {
+            e.Validate();
+
+            if (e.StandardEvent)
+            {
+                m_Buffer.PushStandardEventStart(e.Name, e.EventVersion);
+                PushCommonParams(callingMethodIdentifier);
+            }
+            else
+            {
+                m_Buffer.PushCustomEventStart(e.Name);
+            }
+
+            e.Serialize(m_Buffer);
+
+            // Clear the event object now that we've serialised it, so it can be reused/object pooled/etc.
+            e.Reset();
+
+            m_Buffer.PushEndEvent();
+        }
+
+        public void PushEmptyEvent(string name)
+        {
+            m_Buffer.PushCustomEventStart(name);
+            m_Buffer.PushEndEvent();
         }
     }
 }

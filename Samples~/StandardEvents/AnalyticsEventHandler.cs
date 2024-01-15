@@ -81,16 +81,16 @@ namespace Unity.Services.Analytics
             Debug.Log("Record Sale Transaction With Multiple Virtual Currencies Finished");
         }
 
-        public void RecordSaleEventWithOneItem()
+        public void RecordTradeEventWithOneItem()
         {
-            StandardEventSample.RecordSaleEventWithOneItem();
-            Debug.Log("Record Sale Event With One Item Finished");
+            StandardEventSample.RecordTradeEventWithOneItem();
+            Debug.Log("Record Trade Event With One Item Finished");
         }
 
-        public void RecordSaleEventWithMultipleItems()
+        public void RecordTradeEventWithMultipleItems()
         {
-            StandardEventSample.RecordSaleEventWithMultipleItems();
-            Debug.Log("Record Sale Event With Multiple Items Finished");
+            StandardEventSample.RecordTradeEventWithMultipleItems();
+            Debug.Log("Record Trade Event With Multiple Items Finished");
         }
 
         public void RecordSaleEventWithOptionalParameters()

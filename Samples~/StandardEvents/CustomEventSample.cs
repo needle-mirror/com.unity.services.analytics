@@ -3,30 +3,44 @@ using System.Collections.Generic;
 
 namespace Unity.Services.Analytics
 {
+    public class MyEvent : Event
+    {
+        public MyEvent() : base("myEvent")
+        {
+        }
+
+        public string FabulousString { set { SetParameter("fabulousString", value); } }
+        public int SparklingInt { set { SetParameter("sparklingInt", value); } }
+        public long TremendousLong { set { SetParameter("tremendousLong", value); } }
+        public float SpectacularFloat { set { SetParameter("spectacularFloat", value); } }
+        public double IncredibleDouble { set { SetParameter("incredibleDouble", value); } }
+        public bool PeculiarBool { set { SetParameter("peculiarBool", value); } }
+    }
+
     public static class CustomEventSample
     {
         public static void RecordCustomEventWithNoParameters()
         {
             // NOTE: this will show up on the dashboard as an invalid event, unless
             // you have created a schema that matches it.
-            AnalyticsService.Instance.CustomData("myEvent");
+            AnalyticsService.Instance.RecordEvent("myEvent");
         }
 
         public static void RecordCustomEventWithParameters()
         {
             // NOTE: this will show up on the dashboard as an invalid event, unless
             // you have created a schema that matches it.
-            var parameters = new Dictionary<string, object>
+            MyEvent myEvent = new MyEvent
             {
-                { "fabulousString", "hello there" },
-                { "sparklingInt", 1337 },
-                { "tremendousLong", Int64.MaxValue },
-                { "spectacularFloat", 0.451f },
-                { "incredibleDouble", 0.000000000000000031337 },
-                { "peculiarBool", true }
+                FabulousString = "hello there",
+                SparklingInt = 1337,
+                TremendousLong = Int64.MaxValue,
+                SpectacularFloat = 0.451f,
+                IncredibleDouble = 0.000000000000000031337,
+                PeculiarBool = true
             };
 
-            AnalyticsService.Instance.CustomData("myEvent", parameters);
+            AnalyticsService.Instance.RecordEvent(myEvent);
         }
     }
 }

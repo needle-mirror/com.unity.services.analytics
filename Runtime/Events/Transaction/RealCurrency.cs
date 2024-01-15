@@ -2,6 +2,7 @@ using System;
 
 namespace Unity.Services.Analytics
 {
+    [Obsolete("Please create a TransactionEvent/TransactionFailedEvent and use RecordEvent(...) instead. There is a replacement TransactionRealCurrency class there.")]
     public struct RealCurrency
     {
         /// <summary>

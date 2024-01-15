@@ -1,7 +1,9 @@
+using System;
 using System.Collections.Generic;
 
 namespace Unity.Services.Analytics
 {
+    [Obsolete("Please create a TransactionEvent/TransactionFailedEvent and use RecordEvent(...) instead. The Product container used by ProductsSpent and ProductsReceived has been replaced by SpentItems/SpentRealCurrency/SpentVirtualCurrencies/etc fields.")]
     public struct Product
     {
         /// <summary>

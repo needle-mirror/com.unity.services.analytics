@@ -2,6 +2,7 @@ using System;
 
 namespace Unity.Services.Analytics
 {
+    [Obsolete("Please create a TransactionFailedEvent and use RecordEvent(...) instead.")]
     public struct TransactionFailedParameters
     {
         /// <summary>

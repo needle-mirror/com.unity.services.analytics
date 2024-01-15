@@ -15,6 +15,84 @@ namespace Unity.Services.Analytics
         string PrivacyUrl { get; }
 
         /// <summary>
+        /// Signals that consent has been obtained from the player and enables data collection.
+        ///
+        /// By calling this method you confirm that consent has been obtained or is not required from the player under any applicable
+        /// data privacy laws (e.g. GDPR in Europe, PIPL in China). Please obtain your own legal advice to ensure you are in compliance
+        /// with any data privacy laws regarding personal data collection in the territories in which your app is available.
+        /// </summary>
+        void StartDataCollection();
+
+        /// <summary>
+        /// Gets the user ID that Analytics is currently recording into the userId field of events.
+        /// </summary>
+        /// <returns>The user ID as a string</returns>
+        string GetAnalyticsUserID();
+
+        /// <summary>
+        /// Gets the session ID that is currently recording into the sessionID field of events.
+        /// </summary>
+        /// <returns>The session ID as a string</returns>
+        string SessionID { get; }
+
+        /// <summary>
+        /// Record an acquisitionSource event, if the player has opted in to data collection (see OptIn method).
+        /// </summary>
+        /// <param name="acquisitionSourceParameters">(Required) Helper object to handle parameters.</param>
+        [Obsolete("Please create an AcquisitionSourceEvent and use RecordEvent(...) instead.")]
+        void AcquisitionSource(AcquisitionSourceParameters acquisitionSourceParameters);
+
+        /// <summary>
+        /// Record an adImpression event, if the player has opted in to data collection (see OptIn method).
+        /// </summary>
+        /// <param name="parameters">(Required) Helper object to handle parameters.</param>
+        [Obsolete("Please create an AdImpressionEvent and use RecordEvent(...) instead.")]
+        void AdImpression(AdImpressionParameters parameters);
+
+        /// <summary>
+        /// Record a transaction event, if the player has opted in to data collection (see OptIn method).
+        /// </summary>
+        /// <param name="parameters">(Required) Helper object to handle parameters.</param>
+        [Obsolete("Please create a TransactionEvent and use RecordEvent(...) instead.")]
+        void Transaction(TransactionParameters parameters);
+
+        /// <summary>
+        /// Record a transactionFailed event, if the player has opted in to data collection.
+        /// </summary>
+        /// <param name="parameters">(Required) Helper object to handle parameters.</param>
+        [Obsolete("Please create a TransactionFailedEvent and use RecordEvent(...) instead.")]
+        void TransactionFailed(TransactionFailedParameters parameters);
+
+        /// <summary>
+        /// Converts an amount of currency to the minor units required for the objects passed to the Transaction method.
+        /// This method uses data from ISO 4217. Note that this method expects you to pass in currency in the major units for
+        /// conversion - if you already have data in the minor units you don't need to call this method.
+        /// For example - 1.99 USD would be converted to 199, 123 JPY would be returned unchanged.
+        /// </summary>
+        /// <param name="currencyCode">The ISO4217 currency code for the input currency. For example, USD for dollars, or JPY for Japanese Yen</param>
+        /// <param name="value">The major unit value of currency, for example 1.99 for 1 dollar 99 cents.</param>
+        /// <returns>The minor unit value of the input currency, for example for an input of 1.99 USD 199 would be returned.</returns>
+        long ConvertCurrencyToMinorUnits(string currencyCode, double value);
+
+        /// <summary>
+        /// Record an event, if the player has opted in to data collection (see StartDataCollection method).
+        ///
+        /// Once the event has been serialized, the Event instance will be cleared so it can be safely reused.
+        ///
+        /// A schema for this event must exist on the dashboard or it will be ignored.
+        /// </summary>
+        /// <param name="e">(Required) The event to be recorded.</param>
+        void RecordEvent(Event e);
+
+        /// <summary>
+        /// Record an event that has no parameters, if the player has opted in to data collection (see StartDataCollection method).
+        ///
+        /// A schema for this event must exist on the dashboard or it will be ignored.
+        /// </summary>
+        /// <param name="e">(Required) The name of the event to be recorded.</param>
+        void RecordEvent(string eventName);
+
+        /// <summary>
         /// Forces an immediately upload of all recorded events to the server, if there is an internet connection and a flush is not already in progress.
         /// Flushing is triggered automatically on a regular cadence so you should not need to use this method, unless you specifically require some
         /// queued events to be uploaded immediately.
@@ -23,28 +101,30 @@ namespace Unity.Services.Analytics
         void Flush();
 
         /// <summary>
-        /// Record an adImpression event, if the player has opted in to data collection (see OptIn method).
+        /// Disables data collection, preventing any further events from being recorded or uploaded.
+        /// A final upload containing any events that are currently buffered will be attempted.
+        ///
+        /// Data collection can be re-enabled later, by calling the StartDataCollection method.
         /// </summary>
-        /// <param name="parameters">(Required) Helper object to handle parameters.</param>
-        void AdImpression(AdImpressionParameters parameters);
+        void StopDataCollection();
 
         /// <summary>
-        /// Record a transaction event, if the player has opted in to data collection (see OptIn method).
+        /// Requests that all historic data for this user be purged from the back-end and disables data collection.
+        /// This can be called regardless of whether data collection is currently enabled or disabled.
+        ///
+        /// If the purge request fails (e.g. due to the client being offline), it will be retried until it is successful, even
+        /// across multiple sessions if necessary.
         /// </summary>
-        /// <param name="parameters">(Required) Helper object to handle parameters.</param>
-        void Transaction(TransactionParameters parameters);
+        void RequestDataDeletion();
 
-        /// <summary>
-        /// Record a transactionFailed event, if the player has opted in to data collection.
-        /// </summary>
-        /// <param name="parameters">(Required) Helper object to handle parameters.</param>
-        void TransactionFailed(TransactionFailedParameters parameters);
+        #region Deprecated Methods
 
         /// <summary>
         /// Record a custom event, if the player has opted in to data collection (see OptIn method).
         ///
         /// A schema for this event must exist on the dashboard or it will be ignored.
         /// </summary>
+        [Obsolete("Please use RecordEvent(...) instead, by passing in either an instance of CustomEvent, or an instance of your own sub-class of Event.")]
         void CustomData(string eventName, IDictionary<string, object> eventParams);
 
         /// <summary>
@@ -52,16 +132,8 @@ namespace Unity.Services.Analytics
         ///
         /// A schema for this event must exist on the dashboard or it will be ignored.
         /// </summary>
+        [Obsolete("Please use RecordEvent(string) instead.")]
         void CustomData(string eventName);
-
-        /// <summary>
-        /// Signals that consent has been obtained from the player and enables data collection.
-        ///
-        /// By calling this method you confirm that consent has been obtained or is not required from the player under any applicable
-        /// data privacy laws (e.g. GDPR in Europe, PIPL in China). Please obtain your own legal advice to ensure you are in compliance
-        /// with any data privacy laws regarding personal data collection in the territories in which your app is available.
-        /// </summary>
-        void StartDataCollection();
 
         /// <summary>
         /// Returns identifiers of required consents we need to gather from the user
@@ -104,36 +176,13 @@ namespace Unity.Services.Analytics
         void OptOut();
 
         /// <summary>
-        /// Disables data collection, preventing any further events from being recorded or uploaded.
-        /// A final upload containing any events that are currently buffered will be attempted.
-        ///
-        /// Data collection can be re-enabled later, by calling the StartDataCollection method.
-        /// </summary>
-        void StopDataCollection();
-
-        /// <summary>
-        /// Requests that all historic data for this user be purged from the back-end and disables data collection.
-        /// This can be called regardless of whether data collection is currently enabled or disabled.
-        ///
-        /// If the purge request fails (e.g. due to the client being offline), it will be retried until it is successful, even
-        /// across multiple sessions if necessary.
-        /// </summary>
-        void RequestDataDeletion();
-
-        /// <summary>
         /// Allows other sources to write events with common analytics parameters to the Analytics service. This is primarily for use
         /// by other packages - as this method adds common parameters that may not be expected in the general case, for custom events
         /// you should use the <c>CustomData</c> method instead.
         /// </summary>
         /// <param name="eventToRecord">Internal event to record</param>
         [Obsolete("This mechanism is no longer supported and will be removed in a future version. Use the new Core IAnalyticsStandardEventComponent API instead.")]
-        void RecordInternalEvent(Event eventToRecord);
-
-        /// <summary>
-        /// Record an acquisitionSource event, if the player has opted in to data collection (see OptIn method).
-        /// </summary>
-        /// <param name="acquisitionSourceParameters">(Required) Helper object to handle parameters.</param>
-        void AcquisitionSource(AcquisitionSourceParameters acquisitionSourceParameters);
+        void RecordInternalEvent(Internal.Event eventToRecord);
 
         /// <summary>
         /// Allows you to disable the Analytics service. When the service gets disabled all currently cached data both in RAM and on disk
@@ -152,28 +201,6 @@ namespace Unity.Services.Analytics
         /// </example>
         [Obsolete("This method is part of the old consent flow and should no longer be used. For more information, please see the migration guide: https://docs.unity.com/ugs/en-us/manual/analytics/manual/sdk5-migration-guide")]
         Task SetAnalyticsEnabled(bool enabled);
-
-        /// <summary>
-        /// Converts an amount of currency to the minor units required for the objects passed to the Transaction method.
-        /// This method uses data from ISO 4217. Note that this method expects you to pass in currency in the major units for
-        /// conversion - if you already have data in the minor units you don't need to call this method.
-        /// For example - 1.99 USD would be converted to 199, 123 JPY would be returned unchanged.
-        /// </summary>
-        /// <param name="currencyCode">The ISO4217 currency code for the input currency. For example, USD for dollars, or JPY for Japanese Yen</param>
-        /// <param name="value">The major unit value of currency, for example 1.99 for 1 dollar 99 cents.</param>
-        /// <returns>The minor unit value of the input currency, for example for an input of 1.99 USD 199 would be returned.</returns>
-        long ConvertCurrencyToMinorUnits(string currencyCode, double value);
-
-        /// <summary>
-        /// Gets the user ID that Analytics is currently recording into the userId field of events.
-        /// </summary>
-        /// <returns>The user ID as a string</returns>
-        string GetAnalyticsUserID();
-
-        /// <summary>
-        /// Gets the session ID that is currently recording into the sessionID field of events.
-        /// </summary>
-        /// <returns>The session ID as a string</returns>
-        string SessionID { get; }
+        #endregion
     }
 }
