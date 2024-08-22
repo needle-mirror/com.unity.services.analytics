@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 
 namespace Unity.Services.Analytics.Internal
@@ -16,12 +15,7 @@ namespace Unity.Services.Analytics.Internal
         void PushInt(string name, int value);
         void PushBool(string name, bool value);
         void PushObject(string name, object value);
-        [Obsolete]
-        void PushProduct(string name, Product value);
         void PushProduct(string name, TransactionRealCurrency realCurrency, List<TransactionVirtualCurrency> virtualCurrencies, List<TransactionItem> items);
-
-        [Obsolete("This mechanism is no longer supported and will be removed in a future version. Use the new Core IAnalyticsStandardEventComponent API instead.")]
-        void PushEvent(Event evt);
 
         void FlushToDisk();
         void ClearDiskCache();

@@ -1,4 +1,4 @@
-using System;
+using Unity.Services.Analytics.Internal;
 using UnityEngine;
 
 namespace Unity.Services.Analytics
@@ -10,13 +10,14 @@ namespace Unity.Services.Analytics
         void Disable();
     }
 
-    internal class AnalyticsContainer : MonoBehaviour, IAnalyticsContainer
+    internal class AnalyticsContainer : MonoBehaviour, IAnalyticsContainer, IContainerDebug
     {
         const float k_AutoFlushPeriod = 60.0f;
         const float k_GameRunningPeriod = 60.0f;
 
         static bool s_Created;
         static GameObject s_Container;
+        static AnalyticsContainer m_Instance;
 
         float m_AutoFlushTime = 0.0f;
         float m_GameRunningTime = 0.0f;
@@ -30,14 +31,8 @@ namespace Unity.Services.Analytics
             }
         }
 
-        /// <summary>
-        /// For the test harness only.
-        /// </summary>
-        internal static AnalyticsContainer Instance { get; private set; }
-        /// <summary>
-        /// For the test harness only.
-        /// </summary>
-        internal float TimeUntilHeartbeat => AutoFlushPeriod - m_AutoFlushTime;
+        internal static IContainerDebug ContainerDebug { get { return m_Instance; } }
+        public float TimeUntilNextHeartbeat { get { return AutoFlushPeriod - m_AutoFlushTime; } }
 
         internal static AnalyticsContainer CreateContainer()
         {
@@ -48,7 +43,7 @@ namespace Unity.Services.Analytics
 #endif
 
                 s_Container = new GameObject("AnalyticsContainer");
-                Instance = s_Container.AddComponent<AnalyticsContainer>();
+                m_Instance = s_Container.AddComponent<AnalyticsContainer>();
 
                 s_Container.hideFlags = HideFlags.DontSaveInBuild | HideFlags.NotEditable;
 #if !UNITY_ANALYTICS_DEVELOPMENT
@@ -58,10 +53,10 @@ namespace Unity.Services.Analytics
                 DontDestroyOnLoad(s_Container);
                 s_Created = true;
 
-                Application.quitting += Instance.CleanUp;
+                Application.quitting += m_Instance.CleanUp;
             }
 
-            return Instance;
+            return m_Instance;
         }
 
         public void Initialize(AnalyticsServiceInstance service)
@@ -109,7 +104,7 @@ namespace Unity.Services.Analytics
 
         void CleanUp()
         {
-            Application.quitting -= Instance.CleanUp;
+            Application.quitting -= m_Instance.CleanUp;
 
             m_Service.ApplicationQuit();
 

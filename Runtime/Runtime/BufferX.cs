@@ -36,7 +36,14 @@ namespace Unity.Services.Analytics.Internal
         }
     }
 
-    class BufferX : IBuffer
+    internal struct EventSummary
+    {
+        internal int StartIndex;
+        internal int EndIndex;
+        internal string Id;
+    }
+
+    class BufferX : IBuffer, IBufferDebug
     {
         // 4MB: 4 * 1024 KB to make an MB and * 1024 bytes to make a KB
         // The Collect endpoint can actually accept payloads of up to 5MB (at time of writing, Jan 2023),
@@ -47,7 +54,7 @@ namespace Unity.Services.Analytics.Internal
         readonly byte[] k_WorkingBuffer;
         readonly char[] k_WorkingCharacterBuffer;
 
-        readonly byte[] k_BufferHeader;
+        readonly byte[] k_PayloadHeader;
 
         readonly byte[] k_HeaderEventName;
         readonly byte[] k_HeaderUserName;
@@ -83,13 +90,15 @@ namespace Unity.Services.Analytics.Internal
         readonly byte[] k_Int2CharacterByte;
         readonly long[] k_Order;
 
-
         readonly IBufferSystemCalls m_SystemCalls;
         readonly IDiskCache m_DiskCache;
         readonly IIdentityManager m_UserIdentity;
         readonly ISessionManager m_Session;
 
-        readonly List<int> m_EventEnds;
+        readonly List<EventSummary> m_EventSummaries;
+        string m_CurrentEventId;
+        string m_CurrentEventName;
+        DateTime m_CurrentEventTimestamp;
 
         MemoryStream m_SpareBuffer;
         MemoryStream m_Buffer;
@@ -98,25 +107,31 @@ namespace Unity.Services.Analytics.Internal
 
         /// <summary>
         /// The number of events that have been recorded into this buffer.
+        /// Only exposed for unit testing.
         /// </summary>
-        internal int EventsRecorded { get { return m_EventEnds.Count; } }
+        internal int EventsRecorded { get { return m_EventSummaries.Count; } }
 
         /// <summary>
-        /// The byte index of the end of each event blob in the bytestream.
+        /// The metadata associated with each event blob in the bytestream.
+        /// Only exposed for unit testing.
         /// </summary>
-        internal IReadOnlyList<int> EventEndIndices => m_EventEnds;
+        internal IReadOnlyList<EventSummary> EventSummaries { get { return m_EventSummaries; } }
 
         /// <summary>
         /// The raw contents of the underlying bytestream.
         /// Only exposed for unit testing.
         /// </summary>
-        internal byte[] RawContents => m_Buffer.ToArray();
+        internal byte[] RawContents { get { return m_Buffer.ToArray(); } }
+
+        public event Action<string, string, DateTime, byte[]> EventRecorded;
+        public event Action<HashSet<string>> EventsClearing;
+        public event Action<HashSet<string>> EventsCleared;
 
         public BufferX(IBufferSystemCalls eventIdGenerator, IDiskCache diskCache, IIdentityManager userIdentity, ISessionManager session)
         {
             m_Buffer = new MemoryStream((int)k_UploadBatchMaximumSizeInBytes);
             m_SpareBuffer = new MemoryStream((int)k_UploadBatchMaximumSizeInBytes);
-            m_EventEnds = new List<int>();
+            m_EventSummaries = new List<EventSummary>();
 
             m_SystemCalls = eventIdGenerator;
             m_DiskCache = diskCache;
@@ -129,7 +144,7 @@ namespace Unity.Services.Analytics.Internal
             k_WorkingBuffer = new byte[k_UploadBatchMaximumSizeInBytes];
             k_WorkingCharacterBuffer = new char[k_UploadBatchMaximumSizeInBytes];
 
-            k_BufferHeader = Encoding.UTF8.GetBytes("{\"eventList\":[");
+            k_PayloadHeader = Encoding.UTF8.GetBytes("{\"eventList\":[");
 
             k_HeaderEventName = Encoding.UTF8.GetBytes("{\"eventName\":\"");
             k_HeaderUserName = Encoding.UTF8.GetBytes("\",\"userID\":\"");
@@ -364,20 +379,23 @@ namespace Unity.Services.Analytics.Internal
 
         private void PushCommonEventStart(string name)
         {
-            DateTime eventTimestamp = m_SystemCalls.Now();
+            m_CurrentEventTimestamp = m_SystemCalls.Now();
+            m_CurrentEventId = m_SystemCalls.GenerateGuid();
+            m_CurrentEventName = name;
+
 #if UNITY_ANALYTICS_EVENT_LOGS
-            Debug.LogFormat("Recording event {0} at {1} (UTC)...", name, SerializeDateTime(eventTimestamp));
+            Debug.LogFormat("Recording event {0} at {1} (UTC)...", m_CurrentEventName, SerializeDateTime(m_CurrentEventTimestamp));
 #endif
             WriteBytes(k_HeaderEventName);
-            WriteString(name);
+            WriteString(m_CurrentEventName);
             WriteBytes(k_HeaderUserName);
             WriteString(m_UserIdentity.UserId);
             WriteBytes(k_HeaderSessionID);
             WriteString(m_Session.SessionId);
             WriteBytes(k_HeaderEventUUID);
-            WriteString(m_SystemCalls.GenerateGuid());
+            WriteString(m_CurrentEventId);
             WriteBytes(k_HeaderTimestamp);
-            WriteDateTime(eventTimestamp);
+            WriteDateTime(m_CurrentEventTimestamp);
             WriteBytes(k_QuoteComma);
         }
 
@@ -406,24 +424,51 @@ namespace Unity.Services.Analytics.Internal
 
             int bufferLength = (int)m_Buffer.Length;
 
+            int startIndex = m_EventSummaries.Count > 0
+                ? m_EventSummaries[m_EventSummaries.Count - 1].EndIndex
+                : 0;
+            int endIndex = bufferLength;
+
             // If this event is too big to ever be uploaded, clear the buffer so we don't get stuck forever.
-            int eventSize = m_EventEnds.Count > 0 ? bufferLength - m_EventEnds[m_EventEnds.Count - 1] : bufferLength;
+            int eventSize = endIndex - startIndex;
 
             if (eventSize > k_UploadBatchMaximumSizeInBytes)
             {
                 Debug.LogWarning($"Detected event that would be too big to upload (greater than {k_UploadBatchMaximumSizeInBytes / 1024}KB in size), discarding it to prevent blockage.");
 
-                int previousBufferLength = m_EventEnds.Count > 0 ? m_EventEnds[m_EventEnds.Count - 1] : k_BufferHeader.Length;
+                int previousBufferLength = m_EventSummaries.Count > 0 ? m_EventSummaries[m_EventSummaries.Count - 1].EndIndex : 0;
 
                 m_Buffer.SetLength(previousBufferLength);
                 m_Buffer.Position = previousBufferLength;
             }
             else
             {
-                m_EventEnds.Add(bufferLength);
+                m_EventSummaries.Add(new EventSummary
+                {
+                    StartIndex = startIndex,
+                    EndIndex = endIndex,
+                    Id = m_CurrentEventId
+                });
+
+                if (EventRecorded != null)
+                {
+                    long currentIndex = m_Buffer.Position;
+
+                    // Pull the buffer head back so we can copy out this event's complete body.
+                    m_Buffer.Seek(startIndex, SeekOrigin.Begin);
+
+                    int eventLength = endIndex - startIndex;
+                    byte[] eventBody = new byte[eventLength];
+                    m_Buffer.Read(eventBody, 0, eventLength);
+
+                    // Reset position so we can add more events
+                    m_Buffer.Seek(currentIndex, SeekOrigin.Begin);
+
+                    EventRecorded(m_CurrentEventId, m_CurrentEventName, m_CurrentEventTimestamp, eventBody);
+                }
 
 #if UNITY_ANALYTICS_DEVELOPMENT
-                Debug.Log($"Event {m_EventEnds.Count} ended at: {bufferLength}");
+                Debug.Log($"Event {m_EventSummaries.Count} ended at: {bufferLength}");
 #endif
             }
         }
@@ -575,54 +620,6 @@ namespace Unity.Services.Analytics.Internal
             WriteBytes(k_QuoteComma);
         }
 
-        [Obsolete]
-        public void PushProduct(string name, Product value)
-        {
-            PushObjectStart(name);
-
-            if (value.RealCurrency.HasValue)
-            {
-                PushObjectStart("realCurrency");
-                PushString("realCurrencyType", value.RealCurrency.Value.RealCurrencyType);
-                PushInt64("realCurrencyAmount", value.RealCurrency.Value.RealCurrencyAmount);
-                PushObjectEnd();
-            }
-
-            if (value.VirtualCurrencies != null && value.VirtualCurrencies.Count != 0)
-            {
-                PushArrayStart("virtualCurrencies");
-                foreach (var virtualCurrency in value.VirtualCurrencies)
-                {
-                    PushObjectStart(null);
-                    PushObjectStart("virtualCurrency");
-                    PushString("virtualCurrencyName", virtualCurrency.VirtualCurrencyName);
-                    PushString("virtualCurrencyType", virtualCurrency.VirtualCurrencyType.ToString());
-                    PushInt64("virtualCurrencyAmount", virtualCurrency.VirtualCurrencyAmount);
-                    PushObjectEnd();
-                    PushObjectEnd();
-                }
-                PushArrayEnd();
-            }
-
-            if (value.Items != null && value.Items.Count != 0)
-            {
-                PushArrayStart("items");
-                foreach (var item in value.Items)
-                {
-                    PushObjectStart(null);
-                    PushObjectStart("item");
-                    PushString("itemName", item.ItemName);
-                    PushString("itemType", item.ItemType);
-                    PushInt64("itemAmount", item.ItemAmount);
-                    PushObjectEnd();
-                    PushObjectEnd();
-                }
-                PushArrayEnd();
-            }
-
-            PushObjectEnd();
-        }
-
         public void PushProduct(string name, TransactionRealCurrency realCurrency, List<TransactionVirtualCurrency> virtualCurrencies, List<TransactionItem> items)
         {
             PushObjectStart(name);
@@ -749,83 +746,48 @@ namespace Unity.Services.Analytics.Internal
             }
         }
 
-        [Obsolete("This mechanism is no longer supported and will be removed in a future version. Use the new Core IAnalyticsStandardEventComponent API instead.")]
-        public void PushEvent(Event evt)
-        {
-            // Serialize event
-
-            if (evt.Version.HasValue)
-            {
-                PushStandardEventStart(evt.Name, evt.Version.Value);
-            }
-            else
-            {
-                PushCustomEventStart(evt.Name);
-            }
-
-            // Serialize event params
-
-            var eData = evt.Parameters;
-
-            foreach (var data in eData.Data)
-            {
-                if (data.Value is float f32Val)
-                {
-                    PushFloat(data.Key, f32Val);
-                }
-                else if (data.Value is double f64Val)
-                {
-                    PushDouble(data.Key, f64Val);
-                }
-                else if (data.Value is string strVal)
-                {
-                    PushString(data.Key, strVal);
-                }
-                else if (data.Value is int intVal)
-                {
-                    PushInt(data.Key, intVal);
-                }
-                else if (data.Value is Int64 int64Val)
-                {
-                    PushInt64(data.Key, int64Val);
-                }
-                else if (data.Value is bool boolVal)
-                {
-                    PushBool(data.Key, boolVal);
-                }
-            }
-
-            PushEndEvent();
-        }
-
         public byte[] Serialize()
         {
-            if (m_EventEnds.Count > 0)
+            if (m_EventSummaries.Count > 0)
             {
                 long originalBufferPosition = m_Buffer.Position;
 
                 // Tick through the event end indices until we find the last complete event
                 // that fits into the maximum payload size.
-                int end = m_EventEnds[0];
+                int end = m_EventSummaries[0].EndIndex;
                 int nextEnd = 0;
-                while (nextEnd < m_EventEnds.Count &&
-                       m_EventEnds[nextEnd] < k_UploadBatchMaximumSizeInBytes)
+                while (nextEnd < m_EventSummaries.Count &&
+                       m_EventSummaries[nextEnd].EndIndex < k_UploadBatchMaximumSizeInBytes)
                 {
-                    end = m_EventEnds[nextEnd];
+                    end = m_EventSummaries[nextEnd].EndIndex;
                     nextEnd++;
                 }
 
+                // This event will only be subscribed to by editor tools, so if there is no subscription,
+                // don't do the extra work to assemble the list of event IDs.
+                if (EventsClearing != null)
+                {
+                    HashSet<string> clearingEventIds = new HashSet<string>(StringComparer.Ordinal);
+                    for (int i = 0; i < nextEnd; i++)
+                    {
+                        clearingEventIds.Add(m_EventSummaries[i].Id);
+                    }
+
+                    EventsClearing(clearingEventIds);
+                }
+
                 // Extend the payload so we can fit the suffix.
-                byte[] payload = new byte[end + 1];
+                byte[] payload = new byte[k_PayloadHeader.Length + end + 1];
+                k_PayloadHeader.CopyTo(payload, 0);
                 m_Buffer.Position = 0;
-                m_Buffer.Read(payload, 0, end);
+                m_Buffer.Read(payload, k_PayloadHeader.Length, end);
 
                 // NOTE: the final character will be a comma that we don't want,
                 // so take this opportunity to overwrite it with the closing
                 // bracket (event list) and brace (payload object).
                 byte[] suffix = Encoding.UTF8.GetBytes("]}");
-                payload[end - 1] = suffix[0];
-                payload[end] = suffix[1];
+                payload[k_PayloadHeader.Length + end - 1] = suffix[0];
+                payload[k_PayloadHeader.Length + end] = suffix[1];
 
                 m_Buffer.Position = originalBufferPosition;
 
@@ -841,9 +803,8 @@ namespace Unity.Services.Analytics.Internal
         {
             m_Buffer.SetLength(0);
             m_Buffer.Position = 0;
-            WriteBytes(k_BufferHeader);
 
-            m_EventEnds.Clear();
+            m_EventSummaries.Clear();
         }
 
         public void ClearBuffer(long upTo)
@@ -852,30 +813,48 @@ namespace Unity.Services.Analytics.Internal
             // dispatcher getting a response. E.g. if the player triggered a data deletion request while the flush
             // request was in flight.
             // If the buffer is already empty, we do not need to do any work.
-            if (m_EventEnds.Count > 0)
+            if (m_EventSummaries.Count > 0)
             {
                 MemoryStream oldBuffer = m_Buffer;
                 m_Buffer = m_SpareBuffer;
                 m_SpareBuffer = oldBuffer;
 
-                // We want to keep the end markers for events that have been copied over.
+                // We want to keep the start and end markers for events that have been copied over.
                 // We have to account for the start point change AND remove markers for events before the clear point.
 
                 int lastClearedEventIndex = 0;
-                for (int i = 0; i < m_EventEnds.Count; i++)
+                int shift = (int)upTo;
+                for (int i = 0; i < m_EventSummaries.Count; i++)
                 {
-                    m_EventEnds[i] = m_EventEnds[i] - (int)upTo + k_BufferHeader.Length;
-                    if (m_EventEnds[i] <= k_BufferHeader.Length)
+                    EventSummary summary = m_EventSummaries[i];
+                    summary.StartIndex -= shift;
+                    summary.EndIndex -= shift;
+                    m_EventSummaries[i] = summary;
+                    if (m_EventSummaries[i].EndIndex <= 0)
                     {
                         lastClearedEventIndex = i;
                     }
                 }
-                m_EventEnds.RemoveRange(0, lastClearedEventIndex + 1);
+
+                // If the debug panel has not subscribed to the event, then there is no need to do the
+                // extra work of extract the set of uploaded event IDs. This will preserve our runtime
+                // performance while still allowing the editor to snoop when nececssary.
+                if (EventsCleared != null)
+                {
+                    HashSet<string> clearedEventIds = new HashSet<string>(StringComparer.Ordinal);
+                    for (int i = 0; i <= lastClearedEventIndex; i++)
+                    {
+                        clearedEventIds.Add(m_EventSummaries[i].Id);
+                    }
+
+                    EventsCleared(clearedEventIds);
+                }
+
+                m_EventSummaries.RemoveRange(0, lastClearedEventIndex + 1);
 
                 // Reset the buffer back to a blank state...
                 m_Buffer.SetLength(0);
                 m_Buffer.Position = 0;
-                WriteBytes(k_BufferHeader);
 
                 // ... and copy over anything that came after the cut-off point.
                 m_SpareBuffer.Position = upTo;
@@ -892,7 +871,7 @@ namespace Unity.Services.Analytics.Internal
 
         public void FlushToDisk()
         {
-            m_DiskCache.Write(m_EventEnds, m_Buffer);
+            m_DiskCache.Write(m_EventSummaries, m_Buffer);
         }
 
         public void ClearDiskCache()
@@ -902,7 +881,7 @@ namespace Unity.Services.Analytics.Internal
 
         public void LoadFromDisk()
         {
-            bool success = m_DiskCache.Read(m_EventEnds, m_Buffer);
+            bool success = m_DiskCache.Read(m_EventSummaries, m_Buffer);
 
             if (!success)
             {

@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using Unity.Services.Analytics.Data;
 using Unity.Services.Analytics.Internal;
 using Unity.Services.Analytics.Platform;
@@ -30,18 +29,11 @@ namespace Unity.Services.Analytics
             string callingMethodIdentifier);
     }
 
-    partial class AnalyticsServiceInstance : IAnalyticsService, IUnstructuredEventRecorder
+    partial class AnalyticsServiceInstance : IAnalyticsService, IUnstructuredEventRecorder, IServiceDebug
     {
-        internal enum ConsentFlow
-        {
-            Neither,
-            Old,
-            New
-        }
-
         public string PrivacyUrl => "https://unity.com/legal/game-player-and-app-user-privacy-policy";
 
-        const string k_ForgetCallingId = "com.unity.services.analytics.Events." + nameof(OptOut);
+        const string k_ForgetCallingId = "com.unity.services.analytics.Events." + nameof(RequestDataDeletion);
         const string k_StartUpCallingId = "com.unity.services.analytics.Events.Startup";
         internal const string k_InvokedByUserCallingId = "com.unity.services.analytics.Events.UserInvoked";
 
@@ -52,7 +44,6 @@ namespace Unity.Services.Analytics
         readonly ISessionManager m_Session;
         readonly IDataGenerator m_DataGenerator;
         readonly ICoreStatsHelper m_CoreStatsHelper;
-        readonly IConsentTracker m_ConsentTracker;
         readonly IDispatcher m_DataDispatcher;
         readonly IAnalyticsForgetter m_AnalyticsForgetter;
         readonly IAnalyticsServiceSystemCalls m_SystemCalls;
@@ -66,7 +57,6 @@ namespace Unity.Services.Analytics
         DateTime m_ApplicationPauseTime;
 
         bool m_IsActive;
-        ConsentFlow m_ConsentFlow;
 
         /// <summary>
         /// This is for internal unit test usage only.
@@ -78,25 +68,21 @@ namespace Unity.Services.Analytics
             set { m_IsActive = value; }
         }
 
-        /// <summary>
-        /// This is for internal unit test usage only.
-        /// In the real world, flow is selected by calling OptIn() or CheckForRequiredConsents().
-        /// </summary>
-        internal ConsentFlow SelectedConsentFlow
-        {
-            get { return m_ConsentFlow; }
-            set { m_ConsentFlow = value; }
-        }
+        public bool IsActive { get { return m_IsActive; } }
 
         public string GetAnalyticsUserID()
         {
             return m_UserIdentity.UserId;
         }
 
+        public IIdentityManager UserIdentity
+        {
+            get { return m_UserIdentity; }
+        }
+
         internal AnalyticsServiceInstance(IDataGenerator dataGenerator,
                                           IBuffer realBuffer,
                                           ICoreStatsHelper coreStatsHelper,
-                                          IConsentTracker consentTracker,
                                           IDispatcher dispatcher,
                                           IAnalyticsForgetter forgetter,
                                           IIdentityManager userIdentity,
@@ -109,7 +95,6 @@ namespace Unity.Services.Analytics
             m_SystemCalls = systemCalls;
 
             m_CoreStatsHelper = coreStatsHelper;
-            m_ConsentTracker = consentTracker;
             m_DataDispatcher = dispatcher;
             m_Container = container;
 
@@ -132,52 +117,18 @@ namespace Unity.Services.Analytics
             }
         }
 
-        async Task InitializeUser()
-        {
-            try
-            {
-                await m_ConsentTracker.CheckGeoIP();
-
-                if (m_ConsentTracker.IsGeoIpChecked() && (m_ConsentTracker.IsConsentDenied() || m_ConsentTracker.IsOptingOutInProgress()))
-                {
-                    OptOut();
-                }
-            }
-#if UNITY_ANALYTICS_EVENT_LOGS
-            catch (ConsentCheckException e)
-            {
-                Debug.Log("Initial GeoIP lookup fail: " + e.Message);
-            }
-#else
-            catch (ConsentCheckException)
-            {
-                // Do nothing: we do not want to disturb the player because there is no action the game can take.
-            }
-#endif
-        }
-
         public void StartDataCollection()
         {
             // The New flow allows "opt out and back in again", so this method can be activated
             // repeatedly within a single session. It should do nothing if the SDK is already
             // active, but otherwise (re)activate the SDK as normal.
-            if (m_ConsentFlow == ConsentFlow.Neither ||
-                m_ConsentFlow == ConsentFlow.New)
+            if (!m_IsActive)
             {
-                m_ConsentFlow = ConsentFlow.New;
+                // In case you had previously requested data deletion, you must now be able to request it again.
+                m_AnalyticsForgetter.ResetDataDeletionStatus();
+                m_CoreStatsHelper.SetCoreStatsConsent(true);
 
-                if (!m_IsActive)
-                {
-                    // In case you had previously requested data deletion, you must now be able to request it again.
-                    m_AnalyticsForgetter.ResetDataDeletionStatus();
-                    m_CoreStatsHelper.SetCoreStatsConsent(true);
-
-                    Activate();
-                }
-            }
-            else if (m_ConsentFlow == ConsentFlow.Old)
-            {
-                throw new NotSupportedException("The OptIn method cannot be used under the old consent flow.");
+                Activate();
             }
         }
 
@@ -197,21 +148,10 @@ namespace Unity.Services.Analytics
 
         public void StopDataCollection()
         {
-            if (m_ConsentFlow == ConsentFlow.New)
+            if (m_IsActive)
             {
-                if (m_IsActive)
-                {
-                    m_DataDispatcher.Flush();
-                    Deactivate();
-                }
-            }
-            else if (m_ConsentFlow == ConsentFlow.Old)
-            {
-                throw new NotSupportedException("The StopDataCollection() method cannot be used under the old consent flow. Please see the migration guide for more information: https://docs.unity.com/ugs/en-us/manual/analytics/manual/sdk5-migration-guide");
-            }
-            else
-            {
-                throw new NotSupportedException("The StopDataCollection() method cannot be used before StartDataCollection() has been called.");
+                m_DataDispatcher.Flush();
+                Deactivate();
             }
         }
 
@@ -239,8 +179,7 @@ namespace Unity.Services.Analytics
             {
                 m_IsActive = false;
 
-                if ((m_ConsentFlow == ConsentFlow.New && !m_AnalyticsForgetter.DeletionInProgress) ||
-                    (m_ConsentFlow == ConsentFlow.Old && !m_ConsentTracker.IsOptingOutInProgress()))
+                if (!m_AnalyticsForgetter.DeletionInProgress)
                 {
                     // Only disable the container if opting out is not in progress. Otherwise, leave it
                     // running so that the heartbeat can re-attempt the deletion request upload until
@@ -311,29 +250,8 @@ namespace Unity.Services.Analytics
         {
             if (m_IsActive)
             {
-                switch (m_ConsentFlow)
-                {
-                    case ConsentFlow.Old:
-                        if (m_ConsentTracker.IsGeoIpChecked() && m_ConsentTracker.IsConsentGiven())
-                        {
-                            m_DataDispatcher.Flush();
-                        }
-                        else
-                        {
-                            // Also, check if the consent was definitely checked and given at this point.
-                            Debug.LogWarning("Required consent wasn't checked and given when trying to dispatch events, the events cannot be sent.");
-                        }
-
-                        if (m_ConsentTracker.IsOptingOutInProgress())
-                        {
-                            m_AnalyticsForgetter.AttemptToForget(m_UserIdentity.UserId, m_UserIdentity.InstallId, m_UserIdentity.PlayerId, BufferX.SerializeDateTime(DateTime.Now), k_ForgetCallingId, OldForgetMeEventUploaded);
-                        }
-                        break;
-                    case ConsentFlow.New:
-                        // No need for conditional guard, m_IsActive is only true if we are clear to flush.
-                        m_DataDispatcher.Flush();
-                        break;
-                }
+                // No need for any further conditional guards, m_IsActive is only true if we are clear to flush.
+                m_DataDispatcher.Flush();
             }
             else if (m_AnalyticsForgetter.DeletionInProgress)
             {
@@ -344,15 +262,6 @@ namespace Unity.Services.Analytics
         public void RequestDataDeletion()
         {
             DeactivateWithDataDeletionRequest();
-        }
-
-        [Obsolete("This mechanism is no longer supported and will be removed in a future version. Use the new Core IAnalyticsStandardEventComponent API instead.")]
-        public void RecordInternalEvent(Internal.Event eventToRecord)
-        {
-            if (m_IsActive)
-            {
-                m_DataBuffer.PushEvent(eventToRecord);
-            }
         }
 
         internal void ApplicationQuit()
@@ -367,6 +276,10 @@ namespace Unity.Services.Analytics
 
                 Flush();
             }
+
+            // If we are quitting merely as part of returning to Edit Mode in the editor,
+            // we still need to clear up the static accessor(s).
+            AnalyticsService.TearDown();
         }
 
         internal void RecordGameRunningIfNecessary()
@@ -383,66 +296,6 @@ namespace Unity.Services.Analytics
                     m_BufferLengthAtLastGameRunning = m_DataBuffer.Length;
                 }
             }
-        }
-
-        [Obsolete]
-        public void AcquisitionSource(AcquisitionSourceParameters acquisitionSourceParameters)
-        {
-            if (m_IsActive)
-            {
-                m_DataGenerator.AcquisitionSource("com.unity.services.analytics.events.acquisitionSource", acquisitionSourceParameters);
-            }
-#if UNITY_ANALYTICS_EVENT_LOGS
-            else
-            {
-                Debug.Log("Did not record acquisitionSource event because player has not opted in.");
-            }
-#endif
-        }
-
-        [Obsolete]
-        public void AdImpression(AdImpressionParameters parameters)
-        {
-            if (m_IsActive)
-            {
-                m_DataGenerator.AdImpression("com.unity.services.analytics.events.adimpression", parameters);
-            }
-#if UNITY_ANALYTICS_EVENT_LOGS
-            else
-            {
-                Debug.Log("Did not record adImpression event because player has not opted in.");
-            }
-#endif
-        }
-
-        [Obsolete]
-        public void Transaction(TransactionParameters parameters)
-        {
-            if (m_IsActive)
-            {
-                m_DataGenerator.Transaction("com.unity.services.analytics.events.transaction", parameters);
-            }
-#if UNITY_ANALYTICS_EVENT_LOGS
-            else
-            {
-                Debug.Log("Did not record transaction event because player has not opted in.");
-            }
-#endif
-        }
-
-        [Obsolete]
-        public void TransactionFailed(TransactionFailedParameters parameters)
-        {
-            if (m_IsActive)
-            {
-                m_DataGenerator.TransactionFailed("com.unity.services.analytics.events.TransactionFailed", parameters);
-            }
-#if UNITY_ANALYTICS_EVENT_LOGS
-            else
-            {
-                Debug.Log("Did not record transactionFailed event because player has not opted in.");
-            }
-#endif
         }
 
         public long ConvertCurrencyToMinorUnits(string currencyCode, double value)
@@ -527,21 +380,6 @@ namespace Unity.Services.Analytics
                 Debug.Log("Did not record custom event " + e.Name + " because player has not opted in.");
             }
 #endif
-        }
-
-        public async Task SetAnalyticsEnabled(bool enabled)
-        {
-            if (enabled && !m_IsActive)
-            {
-                Activate();
-            }
-            else if (!enabled && m_IsActive)
-            {
-                Deactivate();
-            }
-
-            // For backwards compatibility.
-            await Task.CompletedTask;
         }
     }
 }

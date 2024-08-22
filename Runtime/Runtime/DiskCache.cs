@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Runtime.InteropServices.ComTypes;
-using System.Security.Cryptography;
 using UnityEngine;
 
 namespace Unity.Services.Analytics.Internal
@@ -17,16 +15,16 @@ namespace Unity.Services.Analytics.Internal
         /// <summary>
         /// Compiles the provided list of indices and payload buffer into a binary file and saves it to disk.
         /// </summary>
-        /// <param name="eventEndIndices">A list of array indices marking where in the payload each event ends</param>
+        /// <param name="eventSummaries">A list of metadata about events that maps to sections of the stream</param>
         /// <param name="payload">The raw UTF8 byte stream of event data</param>
-        void Write(List<int> eventEndIndices, Stream payload);
+        void Write(List<EventSummary> eventSummaries, Stream payload);
 
         /// <summary>
-        /// Clears and overwrites the contents of the provided list and buffer.
+        /// Clears and overwrites the contents of the provided metadata list and buffer with data from a binary file from disk.
         /// </summary>
-        /// <param name="eventEndIndices"></param>
-        /// <param name="buffer"></param>
-        bool Read(List<int> eventEndIndices, Stream buffer);
+        /// <param name="eventSummaries">A list of metadata about events that maps to sections of the stream</param>
+        /// <param name="buffer">The raw UTF8 byte stream of event data</param>
+        bool Read(List<EventSummary> eventSummaries, Stream buffer);
     }
 
     internal interface IFileSystemCalls
@@ -48,14 +46,9 @@ namespace Unity.Services.Analytics.Internal
             m_CanAccessFileSystem =
                 // Switch requires a specific setup to have write access to the disc so it won't be handled here.
                 Application.platform != RuntimePlatform.Switch &&
-#if !UNITY_2021_1_OR_NEWER
-                Application.platform != RuntimePlatform.XboxOne &&
-#endif
-#if UNITY_2019 || UNITY_2020_2_OR_NEWER
                 Application.platform != RuntimePlatform.GameCoreXboxOne &&
                 Application.platform != RuntimePlatform.GameCoreXboxSeries &&
                 Application.platform != RuntimePlatform.PS5 &&
-#endif
                 Application.platform != RuntimePlatform.PS4 &&
                 !String.IsNullOrEmpty(Application.persistentDataPath);
         }
@@ -96,6 +89,7 @@ namespace Unity.Services.Analytics.Internal
     {
         internal const string k_FileHeaderString = "UGSEventCache";
         internal const int k_CacheFileVersionOne = 1;
+        internal const int k_CacheFileVersionTwo = 2;
 
         private readonly string k_CacheFilePath;
         private readonly IFileSystemCalls k_SystemCalls;
@@ -125,19 +119,19 @@ namespace Unity.Services.Analytics.Internal
             k_CacheFileMaximumSize = maximumFileSize;
         }
 
-        public void Write(List<int> eventEndIndices, Stream payload)
+        public void Write(List<EventSummary> eventSummaries, Stream payload)
         {
-            if (eventEndIndices.Count > 0 &&
+            if (eventSummaries.Count > 0 &&
                 k_SystemCalls.CanAccessFileSystem())
             {
                 // Tick through eventEnds until you find the highest one that is still under the file size limit
                 int cacheEnd = 0;
                 int cacheEventCount = 0;
-                for (int e = 0; e < eventEndIndices.Count; e++)
+                for (int e = 0; e < eventSummaries.Count; e++)
                 {
-                    if (eventEndIndices[e] < k_CacheFileMaximumSize)
+                    if (eventSummaries[e].EndIndex < k_CacheFileMaximumSize)
                     {
-                        cacheEnd = eventEndIndices[e];
+                        cacheEnd = eventSummaries[e].EndIndex;
                         cacheEventCount = e + 1;
                     }
                 }
@@ -147,11 +141,13 @@ namespace Unity.Services.Analytics.Internal
                     using (var writer = new BinaryWriter(file))
                     {
                         writer.Write(k_FileHeaderString);       // a specific string to signal file format validity
-                        writer.Write(k_CacheFileVersionOne);    // int version specifier
+                        writer.Write(k_CacheFileVersionTwo);    // int version specifier
                         writer.Write(cacheEventCount);          // int event count (cropped to maximum file size)
                         for (int i = 0; i < cacheEventCount; i++)
                         {
-                            writer.Write(eventEndIndices[i]);   // int event end index
+                            writer.Write(eventSummaries[i].StartIndex);     // int32 event start index
+                            writer.Write(eventSummaries[i].EndIndex);       // int32 event end index
+                            writer.Write(eventSummaries[i].Id);
                         }
 
                         long payloadOriginalPosition = payload.Position;
@@ -177,7 +173,7 @@ namespace Unity.Services.Analytics.Internal
             }
         }
 
-        public bool Read(List<int> eventEndIndices, Stream buffer)
+        public bool Read(List<EventSummary> eventSummaries, Stream buffer)
         {
             if (k_SystemCalls.CanAccessFileSystem() &&
                 k_SystemCalls.FileExists(k_CacheFilePath))
@@ -198,7 +194,10 @@ namespace Unity.Services.Analytics.Internal
                                 switch (version)
                                 {
                                     case k_CacheFileVersionOne:
-                                        ReadVersionOneCacheFile(eventEndIndices, reader, buffer);
+                                        ReadVersionOneCacheFile(eventSummaries, reader, buffer);
+                                        return true;
+                                    case k_CacheFileVersionTwo:
+                                        ReadVersionTwoCacheFile(eventSummaries, reader, buffer);
                                         return true;
                                     default:
                                         Debug.LogWarning($"Unable to read event cache file: unknown file format version {version}");
@@ -224,13 +223,45 @@ namespace Unity.Services.Analytics.Internal
             return false;
         }
 
-        private void ReadVersionOneCacheFile(in List<int> eventEndIndices, BinaryReader reader, in Stream buffer)
+        private void ReadVersionOneCacheFile(in List<EventSummary> eventEndIndices, BinaryReader reader, in Stream buffer)
         {
             int eventCount = reader.ReadInt32();            // int32 event count
             for (int i = 0; i < eventCount; i++)
             {
                 int eventEndIndex = reader.ReadInt32();     // int32 event end index
-                eventEndIndices.Add(eventEndIndex);
+                // During migration from old cache format, we have to fill in the blanks.
+                // Only the indices are important so this should be fine.
+                eventEndIndices.Add(new EventSummary
+                {
+                    StartIndex = i == 0 ? 0 : eventEndIndices[eventEndIndices.Count - 1].EndIndex,
+                    EndIndex = eventEndIndex,
+                    Id = $"loadedFromOldCache{i}"
+                });
+            }
+
+            buffer.SetLength(0);
+            buffer.Position = 0;
+            // V1 cache files include the 14-byte {"eventList":[ header.
+            // We need to skip that because the new buffer does not (it adds the header at serialisation time instead).
+            reader.ReadBytes(14);
+            reader.BaseStream.CopyTo(buffer);               // byte[] event data is the rest of the file
+        }
+
+        private void ReadVersionTwoCacheFile(in List<EventSummary> eventSummaries, BinaryReader reader, in Stream buffer)
+        {
+            int eventCount = reader.ReadInt32();            // int32 event count
+            for (int i = 0; i < eventCount; i++)
+            {
+                int eventStartIndex = reader.ReadInt32();   // int32 event start index
+                int eventEndIndex = reader.ReadInt32();     // int32 event end index
+                string eventId = reader.ReadString();
+
+                eventSummaries.Add(new EventSummary
+                {
+                    StartIndex = eventStartIndex,
+                    EndIndex = eventEndIndex,
+                    Id = eventId
+                });
             }
 
             buffer.SetLength(0);

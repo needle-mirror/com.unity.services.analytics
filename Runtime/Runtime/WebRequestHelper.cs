@@ -25,11 +25,7 @@ namespace Unity.Services.Analytics.Internal
         {
             get
             {
-#if UNITY_2020_1_OR_NEWER
                 return result == UnityWebRequest.Result.ConnectionError;
-#else
-                return isNetworkError;
-#endif
             }
         }
     }

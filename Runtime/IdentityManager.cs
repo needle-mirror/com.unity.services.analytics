@@ -2,7 +2,6 @@ using System;
 using Unity.Services.Authentication.Internal;
 using Unity.Services.Core.Configuration.Internal;
 using Unity.Services.Core.Device.Internal;
-using UnityEngine;
 
 namespace Unity.Services.Analytics.Internal
 {
@@ -11,6 +10,7 @@ namespace Unity.Services.Analytics.Internal
         string UserId { get; }
         string InstallId { get; }
         string PlayerId { get; }
+        string ExternalId { get; }
 
         bool IsNewPlayer { get; }
     }
@@ -33,6 +33,7 @@ namespace Unity.Services.Analytics.Internal
         }
         public string InstallId { get; private set; }
         public string PlayerId { get { return m_PlayerId?.PlayerId; } }
+        public string ExternalId { get { return m_ExternalId?.UserId; } }
 
         public bool IsNewPlayer { get; private set; }
 

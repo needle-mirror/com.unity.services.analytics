@@ -1,7 +1,4 @@
-using System.Collections.Generic;
 using Unity.Services.Core.Analytics.Internal;
-using Unity.Services.Core.Configuration.Internal;
-using Unity.Services.Core.Internal;
 
 namespace Unity.Services.Analytics.Internal
 {

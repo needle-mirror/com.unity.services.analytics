@@ -1,5 +1,4 @@
-using System.Collections.Generic;
-using System.Threading.Tasks;
+using System;
 using UnityEngine;
 using UnityEngine.Networking;
 
@@ -14,7 +13,7 @@ namespace Unity.Services.Analytics.Internal
         void Flush();
     }
 
-    class Dispatcher : IDispatcher
+    class Dispatcher : IDispatcher, IDispatcherDebug
     {
         readonly IWebRequestHelper m_WebRequestHelper;
         readonly string m_CollectUrl;
@@ -25,12 +24,15 @@ namespace Unity.Services.Analytics.Internal
 
         IBuffer m_DataBuffer;
         IWebRequest m_FlushRequest;
+        byte[] m_LastFlushPayload;
+        int m_FlushBufferIndex;
 
         public int ConsecutiveFailedUploadCount { get; private set; }
 
-        internal bool FlushInProgress { get; private set; }
+        public bool FlushInProgress { get; private set; }
 
-        private int m_FlushBufferIndex;
+        public event Action<byte[]> FlushStarted;
+        public event Action<int, bool, bool, bool, bool, byte[]> FlushFinished;
 
         public Dispatcher(IWebRequestHelper webRequestHelper, string collectUrl)
         {
@@ -61,6 +63,7 @@ namespace Unity.Services.Analytics.Internal
 
             var postBytes = m_DataBuffer.Serialize();
             m_FlushBufferIndex = m_DataBuffer.Length;
+            m_LastFlushPayload = postBytes;
 
             if (postBytes == null || postBytes.Length == 0)
             {
@@ -76,6 +79,11 @@ namespace Unity.Services.Analytics.Internal
 
                 m_WebRequestHelper.SendWebRequest(m_FlushRequest, UploadCompleted);
 
+                if (FlushStarted != null)
+                {
+                    FlushStarted(postBytes);
+                }
+
 #if UNITY_ANALYTICS_EVENT_LOGS
                 Debug.Log("Uploading events...");
 #endif
@@ -87,6 +95,11 @@ namespace Unity.Services.Analytics.Internal
             bool success = responseCode >= 200 && responseCode <= 299;
             bool badRequest = responseCode >= 400 && responseCode <= 499;
             bool intermittentError = responseCode >= 500 && responseCode <= 599 || m_FlushRequest.IsNetworkError;
+
+            if (FlushFinished != null)
+            {
+                FlushFinished((int)responseCode, success, badRequest, intermittentError, m_FlushRequest.IsNetworkError, m_LastFlushPayload);
+            }
 
             if (success || badRequest)
             {

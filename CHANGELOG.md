@@ -4,6 +4,20 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [6.0.1] - 2024-08-22
+
+### Added
+
+* New Analytics Debug Panel accessible in the Unity Editor from Services -> Analytics -> Debug Panel
+  * Monitor the SDK's activity while you play-test
+  * Observe events as they are recorded and uploaded
+  * ... and more!
+
+### Breaking Changes
+
+* The minimum supported editor version for the UGS Analytics SDK is now 2021.3
+* All methods, classes and structs marked as `Obsolete` in earlier versions of the SDK have been removed
+  * If you have trouble upgrading, move to 5.1.0 first, fix the deprecation warnings there, then move to 6.0.0
 
 ## [5.1.1] - 2024-03-26
 
