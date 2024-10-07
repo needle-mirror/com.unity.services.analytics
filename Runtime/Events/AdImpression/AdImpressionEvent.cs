@@ -16,6 +16,9 @@ namespace Unity.Services.Analytics
         private static readonly string[] k_AdProviderValues = Event.BakeEnum2String<AdProvider>(true);
         private static readonly string[] k_AdCompletionStatusValues = Event.BakeEnum2String<AdCompletionStatus>(true);
 
+        /// <summary>
+        /// Creates a new AdImpressionEvent instance that you can populate with the relevant data.
+        /// </summary>
         public AdImpressionEvent() : base("adImpression", true, 1)
         {
         }
@@ -27,7 +30,7 @@ namespace Unity.Services.Analytics
         public AdCompletionStatus AdCompletionStatus { set { SetParameter("adCompletionStatus", k_AdCompletionStatusValues[(int)value]); } }
 
         /// <summary>
-        /// The ad network that served the ad - ie, UNITY, IRONSOURCE.
+        /// The ad network that served the ad - e.g. UNITY, IRONSOURCE.
         /// This value is often passed on a per-impression level by your mediation provider or ad network.
         /// </summary>
         public AdProvider AdProvider { set { SetParameter("adProvider", k_AdProviderValues[(int)value]); } }
@@ -104,6 +107,10 @@ namespace Unity.Services.Analytics
         /// </summary>
         public string AdStatusCallback { set { SetParameter("adStatusCallback", value); } }
 
+        /// <summary>
+        /// The Validate method is called internally during serialization to ensure that all required parameters have been set.
+        /// If any required parameters are missing, warnings are recorded to the console.
+        /// </summary>
         public override void Validate()
         {
             base.Validate();

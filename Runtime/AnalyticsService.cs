@@ -13,6 +13,12 @@ using UnityEngine;
 
 namespace Unity.Services.Analytics
 {
+    /// <summary>
+    /// Client SDK for Unity Analytics.
+    /// https://cloud.unity.com/analytics
+    ///
+    /// The Unity Analytics package enables you to track in-game actions so you can gather user insights, segment your player base and make informed decisions around the optimization of your game.
+    /// </summary>
     public static class AnalyticsService
     {
         const string k_CollectUrlPattern = "https://collect.analytics.unity3d.com/api/analytics/collect/v2/projects/{0}/environments/{1}";
@@ -152,6 +158,9 @@ namespace Unity.Services.Analytics
             m_BufferDebug = null;
         }
 
+        /// <summary>
+        /// This is the entry point for working with the UGS Analytics SDK.
+        /// </summary>
         public static IAnalyticsService Instance
         {
             get

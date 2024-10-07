@@ -1,4 +1,5 @@
 using System;
+using System.Data.Common;
 using System.Runtime.CompilerServices;
 using Unity.Services.Analytics.Internal;
 using Unity.Services.Analytics.Platform;
@@ -21,6 +22,7 @@ namespace Unity.Services.Analytics.Data
         bool HasVolume { get; }
         float Volume { get; }
         double BatteryLevel { get; }
+        string AnalyticsRegionLanguageCode { get; }
     }
 
     interface IDeviceData
@@ -32,6 +34,10 @@ namespace Unity.Services.Analytics.Data
         int ScreenWidth { get; }
         int ScreenHeight { get; }
         float ScreenDpi { get; }
+        string OperatingSystem { get; }
+        string DeviceModel { get; }
+        bool IsDebugDevice { get; }
+        bool IsTiny { get; }
     }
 
     class DeviceDataWrapper : IDeviceData
@@ -43,6 +49,30 @@ namespace Unity.Services.Analytics.Data
         public int ScreenWidth { get { return Screen.width; } }
         public int ScreenHeight { get { return Screen.height; } }
         public float ScreenDpi { get { return Screen.dpi; } }
+        public string OperatingSystem { get { return SystemInfo.operatingSystem; } }
+        public string DeviceModel { get { return SystemInfo.deviceModel; } }
+        public bool IsDebugDevice
+        {
+            get
+            {
+#if UNITY_EDITOR
+                return true;
+#else
+                return false;
+#endif
+            }
+        }
+        public bool IsTiny
+        {
+            get
+            {
+#if UNITY_DOTSRUNTIME
+                return true;
+#else
+                return false;
+#endif
+            }
+        }
     }
 
     class CommonDataWrapper : ICommonData
@@ -58,6 +88,7 @@ namespace Unity.Services.Analytics.Data
         public bool HasVolume { get; }
         public float Volume { get { return DeviceVolumeProvider.GetDeviceVolume(); } }
         public double BatteryLevel { get { return SystemInfo.batteryLevel; } }
+        public string AnalyticsRegionLanguageCode { get { return Locale.AnalyticsRegionLanguageCode(); } }
 
         public CommonDataWrapper(string cloudProjectId)
         {
@@ -119,8 +150,8 @@ namespace Unity.Services.Analytics.Data
     {
         void GameRunning(string callingMethodIdentifier);
         void SdkStartup(string callingMethodIdentifier);
-        void NewPlayer(string callingMethodIdentifier, string deviceModel);
-        void GameStarted(string callingMethodIdentifier, string idLocalProject, string osVersion, bool isTiny, bool debugDevice, string userLocale);
+        void NewPlayer(string callingMethodIdentifier);
+        void GameStarted(string callingMethodIdentifier);
         void GameEnded(string callingMethodIdentifier, DataGenerator.SessionEndState quitState);
         void ClientDevice(string callingMethodIdentifier);
 
@@ -176,31 +207,31 @@ namespace Unity.Services.Analytics.Data
             m_Buffer.PushEndEvent();
         }
 
-        public void NewPlayer(string callingMethodIdentifier, string deviceModel)
+        public void NewPlayer(string callingMethodIdentifier)
         {
             m_Buffer.PushStandardEventStart("newPlayer", 1);
 
             PushCommonParams(callingMethodIdentifier);
 
-            m_Buffer.PushString("deviceModel", deviceModel);
+            m_Buffer.PushString("deviceModel", m_DeviceData.DeviceModel);
 
             m_Buffer.PushEndEvent();
         }
 
-        public void GameStarted(string callingMethodIdentifier, string idLocalProject, string osVersion, bool isTiny, bool debugDevice, string userLocale)
+        public void GameStarted(string callingMethodIdentifier)
         {
             m_Buffer.PushStandardEventStart("gameStarted", 1);
 
             PushCommonParams(callingMethodIdentifier);
 
-            m_Buffer.PushString("userLocale", userLocale);
-            if (!String.IsNullOrEmpty(idLocalProject))
+            m_Buffer.PushString("userLocale", m_CommonData.AnalyticsRegionLanguageCode);
+            if (!String.IsNullOrEmpty(m_CommonData.BuildGUID))
             {
-                m_Buffer.PushString("idLocalProject", idLocalProject);
+                m_Buffer.PushString("idLocalProject", m_CommonData.BuildGUID);
             }
-            m_Buffer.PushString("osVersion", osVersion);
-            m_Buffer.PushBool("isTiny", isTiny);
-            m_Buffer.PushBool("debugDevice", debugDevice);
+            m_Buffer.PushString("osVersion", m_DeviceData.OperatingSystem);
+            m_Buffer.PushBool("isTiny", m_DeviceData.IsTiny);
+            m_Buffer.PushBool("debugDevice", m_DeviceData.IsDebugDevice);
 
             m_Buffer.PushEndEvent();
         }

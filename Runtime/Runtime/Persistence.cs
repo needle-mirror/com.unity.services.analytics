@@ -9,6 +9,8 @@ namespace Unity.Services.Analytics.Internal
 
         int LoadInt(string key);
         string LoadString(string key);
+
+        void ClearValue(string key);
     }
 
     internal class PlayerPrefsPersistence : IPersistence
@@ -51,6 +53,11 @@ namespace Unity.Services.Analytics.Internal
             {
                 return null;
             }
+        }
+
+        public void ClearValue(string key)
+        {
+            PlayerPrefs.DeleteKey(key);
         }
     }
 }

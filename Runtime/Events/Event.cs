@@ -25,6 +25,10 @@ namespace Unity.Services.Analytics
         internal readonly bool StandardEvent;
         internal readonly int EventVersion;
 
+        /// <summary>
+        /// Creates a new Event instance that you can populate with the relevant data.
+        /// </summary>
+        /// <param name="name">The name of the schema to which this event conforms.</param>
         protected Event(string name)
         {
             Name = name;

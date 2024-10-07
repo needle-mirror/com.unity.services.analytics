@@ -4,6 +4,16 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [6.0.2] - 2024-10-07
+
+### Fixed
+
+* Go To Dashboard link in Package Manager in 2022 and newer editor versions now leads to the correct landing page instead of an unrelated error page
+* Numerous public API elements that were missing XmlDoc comments now have them
+* Setting ExternalUserId before enabling the SDK for the first time now correctly records a newPlayer event if it differs from the last seen user ID
+* Changing ExternalUserId while data collection is enabled now correctly starts a new session and records start-up events
+* Changing ExternalUserId while data collection is disabled now correctly records start-up events when it is (re)enabled
+
 ## [6.0.1] - 2024-08-22
 
 ### Added

@@ -19,14 +19,23 @@ namespace Unity.Services.Analytics
     /// </summary>
     public class CustomEvent : Event, IEnumerable
     {
+        /// <summary>
+        /// Creates a new CustomEvent instance for the given event type that you can populate with the relevant data.
+        /// </summary>
+        /// <param name="name">The name of the schema this event will match.</param>
         public CustomEvent(string name) : base(name)
         {
         }
 
+        /// <summary>
+        /// Sets the parameter key to the given value. The value's type must match the type defined in the event schema. Only primitive values (string/int/bool/float) are acceptable.
+        /// </summary>
+        /// <param name="key">The name of this parameter, as defined in the event schema.</param>
+        /// <exception cref="ArgumentException">Thrown if an unsupported type is given for the value.</exception>
         public object this[string key] { set { Add(key, value); } }
 
         /// <summary>
-        /// Adds the objet
+        /// Sets the parameter key to the given value.
         /// </summary>
         /// <param name="key">The name of this parameter, as defined in the event schema.</param>
         /// <param name="value">The value to store for this parameter, of the type defined in the event schema. Only primitive values (string/int/bool/float) are acceptable.</param>
@@ -64,6 +73,10 @@ namespace Unity.Services.Analytics
             }
         }
 
+        /// <summary>
+        /// Provided to allow collection initialization, not intended for public use.
+        /// </summary>
+        /// <returns>An enumerator over all the key/value pairs written to this event.</returns>
         public IEnumerator GetEnumerator()
         {
             // I don't like this because event classes are meant to be write-only containers, but we need

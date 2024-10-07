@@ -5,6 +5,9 @@ using UnityEngine;
 
 namespace Unity.Services.Analytics
 {
+    /// <summary>
+    /// Represents a currency and the amount of it used in a transaction.
+    /// </summary>
     public class TransactionRealCurrency
     {
         /// <summary>
@@ -25,6 +28,9 @@ namespace Unity.Services.Analytics
         }
     }
 
+    /// <summary>
+    /// Represents an in-game item used in a transaction.
+    /// </summary>
     public class TransactionItem
     {
         /// <summary>
@@ -50,6 +56,9 @@ namespace Unity.Services.Analytics
         }
     }
 
+    /// <summary>
+    /// Represents a virtual currency and the amount of it used in a transaction.
+    /// </summary>
     public class TransactionVirtualCurrency
     {
         private readonly static string[] k_VirtualCurrencyTypeValues = Event.BakeEnum2String<VirtualCurrencyType>();
@@ -88,10 +97,17 @@ namespace Unity.Services.Analytics
         private static readonly string[] k_TransactionTypeValues = Event.BakeEnum2String<TransactionType>();
         private static readonly string[] k_TransactionServerValues = Event.BakeEnum2String<TransactionServer>();
 
+        /// <summary>
+        /// Creates a new TransactionEvent instance that you can populate with the relevant data.
+        /// </summary>
         public TransactionEvent() : this("transaction")
         {
         }
 
+        /// <summary>
+        /// Creates a new TransactionEvent instance with a different schema name. For derived types such as TransactionFailed.
+        /// </summary>
+        /// <param name="name">The name of the schema to which this event conforms.</param>
         protected internal TransactionEvent(string name) : base(name, true, 1)
         {
             SpentVirtualCurrencies = new List<TransactionVirtualCurrency>();
@@ -206,6 +222,10 @@ namespace Unity.Services.Analytics
             buffer.PushProduct("productsSpent", SpentRealCurrency, SpentVirtualCurrencies, SpentItems);
         }
 
+        /// <summary>
+        /// The Validate method is called internally during serialization to ensure that all required parameters have been set.
+        /// If any required parameters are missing, warnings are recorded to the console.
+        /// </summary>
         public override void Validate()
         {
             base.Validate();
@@ -221,6 +241,10 @@ namespace Unity.Services.Analytics
             }
         }
 
+        /// <summary>
+        /// The Reset method is called after serialization is complete to empty it of data and allow the instance
+        /// to be reused. This can reduce memory allocations and garbage collection.
+        /// </summary>
         public override void Reset()
         {
             base.Reset();

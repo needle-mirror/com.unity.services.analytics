@@ -10,6 +10,9 @@ namespace Unity.Services.Analytics
     /// </summary>
     public class AcquisitionSourceEvent : Event
     {
+        /// <summary>
+        /// Creates a new AcquisitionSourceEvent instance that you can populate with the relevant data.
+        /// </summary>
         public AcquisitionSourceEvent() : base("acquisitionSource", true, 1)
         {
         }
@@ -60,6 +63,10 @@ namespace Unity.Services.Analytics
         /// </summary>
         public string AcquisitionCampaignType { set { SetParameter("acquisitionCampaignType", value); } }
 
+        /// <summary>
+        /// The Validate method is called internally during serialization to ensure that all required parameters have been set.
+        /// If any required parameters are missing, warnings are recorded to the console.
+        /// </summary>
         public override void Validate()
         {
             base.Validate();

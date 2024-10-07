@@ -1,5 +1,8 @@
 namespace Unity.Services.Analytics
 {
+    /// <summary>
+    /// Whether the ad was watched completely, partially or not at all.
+    /// </summary>
     public enum AdCompletionStatus
     {
         /// <summary>

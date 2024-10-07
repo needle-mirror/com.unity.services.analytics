@@ -12,6 +12,9 @@ namespace Unity.Services.Analytics
     /// </summary>
     public class TransactionFailedEvent : TransactionEvent
     {
+        /// <summary>
+        /// Creates a new TransactionFailedEvent instance that you can populate with the relevant data.
+        /// </summary>
         public TransactionFailedEvent() : base("transactionFailed")
         {
         }
@@ -21,6 +24,10 @@ namespace Unity.Services.Analytics
         /// </summary>
         public string FailureReason { set { SetParameter("failureReason", value); } }
 
+        /// <summary>
+        /// The Validate method is called internally during serialization to ensure that all required parameters have been set.
+        /// If any required parameters are missing, warnings are recorded to the console.
+        /// </summary>
         public override void Validate()
         {
             base.Validate();

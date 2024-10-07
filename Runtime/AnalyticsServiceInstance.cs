@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using Unity.Services.Analytics.Data;
 using Unity.Services.Analytics.Internal;
-using Unity.Services.Analytics.Platform;
 using UnityEngine;
 
 namespace Unity.Services.Analytics
@@ -35,6 +34,7 @@ namespace Unity.Services.Analytics
 
         const string k_ForgetCallingId = "com.unity.services.analytics.Events." + nameof(RequestDataDeletion);
         const string k_StartUpCallingId = "com.unity.services.analytics.Events.Startup";
+        const string k_PlayerChangedCallingId = "com.unity.services.analytics.Events.PlayerChanged";
         internal const string k_InvokedByUserCallingId = "com.unity.services.analytics.Events.UserInvoked";
 
         readonly TimeSpan k_BackgroundSessionRefreshPeriod = TimeSpan.FromMinutes(5);
@@ -57,6 +57,7 @@ namespace Unity.Services.Analytics
         DateTime m_ApplicationPauseTime;
 
         bool m_IsActive;
+        bool m_StartUpEventsRecorded;
 
         /// <summary>
         /// This is for internal unit test usage only.
@@ -102,10 +103,12 @@ namespace Unity.Services.Analytics
             m_DataDispatcher.SetBuffer(realBuffer);
 
             m_IsActive = false;
+            m_StartUpEventsRecorded = false;
 
             m_AnalyticsForgetter = forgetter;
 
             m_UserIdentity = userIdentity;
+            m_UserIdentity.OnPlayerChanged += PlayerChanged;
             m_Session = session;
         }
 
@@ -139,8 +142,9 @@ namespace Unity.Services.Analytics
                 m_IsActive = true;
                 m_Container.Enable();
                 m_DataBuffer.LoadFromDisk();
+                m_UserIdentity.Initialize();
 
-                RecordStartupEvents();
+                RecordStartupEvents(k_StartUpCallingId);
 
                 Flush();
             }
@@ -191,29 +195,39 @@ namespace Unity.Services.Analytics
             m_CoreStatsHelper.SetCoreStatsConsent(false);
         }
 
-        bool m_StartUpEventsRecorded = false;
-        void RecordStartupEvents()
+        void RecordStartupEvents(string callingId)
         {
             if (!m_StartUpEventsRecorded)
             {
                 // Only record start-up events once in a session, even if the player opts in/out/in again.
                 m_StartUpEventsRecorded = true;
 
-                // Startup Events.
-                m_DataGenerator.SdkStartup(k_StartUpCallingId);
-                m_DataGenerator.ClientDevice(k_StartUpCallingId);
-
-#if UNITY_DOTSRUNTIME
-                var isTiny = true;
-#else
-                var isTiny = false;
-#endif
-
-                m_DataGenerator.GameStarted(k_StartUpCallingId, Application.buildGUID, SystemInfo.operatingSystem, isTiny, DebugDevice.IsDebugDevice(), Locale.AnalyticsRegionLanguageCode());
+                m_DataGenerator.SdkStartup(callingId);
+                m_DataGenerator.ClientDevice(callingId);
+                m_DataGenerator.GameStarted(callingId);
 
                 if (m_UserIdentity.IsNewPlayer)
                 {
-                    m_DataGenerator.NewPlayer(k_StartUpCallingId, SystemInfo.deviceModel);
+                    m_DataGenerator.NewPlayer(callingId);
+                }
+            }
+        }
+
+        void PlayerChanged()
+        {
+            if (m_UserIdentity.IsNewPlayer)
+            {
+                m_Session.StartNewSession();
+
+                m_StartUpEventsRecorded = false;
+
+                if (m_IsActive)
+                {
+                    RecordStartupEvents(k_PlayerChangedCallingId);
+                }
+                else
+                {
+                    // These will be recorded after data collection starts (if it ever does).
                 }
             }
         }

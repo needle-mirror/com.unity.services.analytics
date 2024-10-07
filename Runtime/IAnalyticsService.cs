@@ -1,5 +1,11 @@
 namespace Unity.Services.Analytics
 {
+    /// <summary>
+    /// Client SDK for Unity Analytics.
+    /// https://cloud.unity.com/analytics
+    ///
+    /// The Unity Analytics package enables you to track in-game actions so you can gather user insights, segment your player base and make informed decisions around the optimization of your game.
+    /// </summary>
     public interface IAnalyticsService
     {
         /// <summary>
@@ -27,7 +33,6 @@ namespace Unity.Services.Analytics
         /// <summary>
         /// Gets the session ID that is currently recording into the sessionID field of events.
         /// </summary>
-        /// <returns>The session ID as a string</returns>
         string SessionID { get; }
 
         /// <summary>
@@ -56,7 +61,7 @@ namespace Unity.Services.Analytics
         ///
         /// A schema for this event must exist on the dashboard or it will be ignored.
         /// </summary>
-        /// <param name="e">(Required) The name of the event to be recorded.</param>
+        /// <param name="eventName">(Required) The name of the event to be recorded.</param>
         void RecordEvent(string eventName);
 
         /// <summary>
