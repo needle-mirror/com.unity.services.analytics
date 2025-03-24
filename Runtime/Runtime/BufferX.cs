@@ -557,13 +557,14 @@ namespace Unity.Services.Analytics.Internal
             // Newline, etc.
             if (Char.IsControl(character))
             {
-                // Converting to e.g. \U000A rather than \n is not normal, but it is valid JSON.
+                // Converting to e.g. \u000A rather than \n is not normal, but it is valid JSON.
                 // This gives us a reliable way to escape any control character.
                 // We will allocate a small string here to generate the control code, but it
                 // should be relatively rare (i.e. only if a control char is even present).
+                // NOTE: parsers are case-sensitive, it has be a LOWER-CASE \u....!
                 int length = 0;
                 int codepoint = Convert.ToInt32(character);
-                string control = $"\\U{codepoint:X4}";
+                string control = $"\\u{codepoint:X4}";
                 for (int j = 0; j < control.Length; j++)
                 {
                     k_WorkingCharacterBuffer[index + j] = control[j];

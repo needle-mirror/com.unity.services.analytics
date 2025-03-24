@@ -4,6 +4,12 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [6.0.3] - 2025-03-24
+
+### Fixed
+
+* Control characters (e.g. newline) are now serialised correctly and will not cause event batches to be discarded
+
 ## [6.0.2] - 2024-10-07
 
 ### Fixed
@@ -228,7 +234,7 @@ The UGS Analytics is no longer pre-release! No other changes in this version.
 
 ### Breaking Changes
 
-* The API of the Analytics package has been updated to match the other UGS packages. This means that APIs for recording events that were previously available on the `Events` static class are now available via `AnalyticsService.Instance` instead. 
+* The API of the Analytics package has been updated to match the other UGS packages. This means that APIs for recording events that were previously available on the `Events` static class are now available via `AnalyticsService.Instance` instead.
 In addition, some classes that were previously nested in other types have been moved to standalone classes.
   * The `Events` static class has changed to `AnalyticsService.Instance` - the same event recording methods are found on this new instance
   * The `Transaction` method now uses standalone classes for `Product`, `TransactionType`, etc.
@@ -264,8 +270,8 @@ In addition, some classes that were previously nested in other types have been m
 
 ### Added
 
-**Breaking Change**: 
-- New APIs provided for checking if PIPL consent is needed, and recording users' consent. 
+**Breaking Change**:
+- New APIs provided for checking if PIPL consent is needed, and recording users' consent.
   It is now required to check if any consent is required, and provide that consent if necessary, before the events will be sent from the SDK.
 
 ## [2.0.7-pre.7] - 2021-10-20
