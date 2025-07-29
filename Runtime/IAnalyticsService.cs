@@ -1,3 +1,5 @@
+using System;
+
 namespace Unity.Services.Analytics
 {
     /// <summary>
@@ -22,6 +24,9 @@ namespace Unity.Services.Analytics
         /// data privacy laws (e.g. GDPR in Europe, PIPL in China). Please obtain your own legal advice to ensure you are in compliance
         /// with any data privacy laws regarding personal data collection in the territories in which your app is available.
         /// </summary>
+#if ENABLE_UNITY_CONSENT
+        [Obsolete("Use the EndUserConsent.SetConsentState(...) method to start data collection by granting consent for AnalyticsIntent.")]
+#endif
         void StartDataCollection();
 
         /// <summary>
@@ -78,6 +83,9 @@ namespace Unity.Services.Analytics
         ///
         /// Data collection can be re-enabled later, by calling the StartDataCollection method.
         /// </summary>
+#if ENABLE_UNITY_CONSENT
+        [Obsolete("Use the EndUserConsent.SetConsentState(...) method to stop data collection by denying consent for AnalyticsIntent.")]
+#endif
         void StopDataCollection();
 
         /// <summary>

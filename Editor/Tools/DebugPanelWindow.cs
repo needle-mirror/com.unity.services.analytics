@@ -96,7 +96,11 @@ namespace Unity.Services.Analytics.Editor
             m_EventStreamContainer = rootVisualElement.Q<ListView>("event-stream-list");
             m_EventStreamContainer.makeItem = MakeEventStreamListViewItem;
             m_EventStreamContainer.bindItem = BindEventStreamListViewItem;
+#if UNITY_6000_2_OR_NEWER
+            m_EventStreamContainer.selectionChanged += SelectEventStreamItem;
+#else
             m_EventStreamContainer.onSelectionChange += SelectEventStreamItem;
+#endif
             m_EventStreamContainer.itemsSource = m_Model.EventStream;
 
             m_EventStreamEmptyContainer = rootVisualElement.Q<VisualElement>("event-stream-empty");
@@ -319,11 +323,20 @@ namespace Unity.Services.Analytics.Editor
                     m_StatusIndicatorText.text = "Data Collection Inactive";
                     m_StatusIndicatorText.tooltip = "The SDK is in memory but is currently disabled." +
                         "Incoming events will be ignored and discarded immediately.";
+
+#if ENABLE_UNITY_CONSENT
+                    m_EventStreamEmptyLabel.text = "You must get consent from the player to collect their data. " +
+                        "Once you confirm you have player consent, use <b>EndUserConsent.SetConsentStatus(...)</b> to grant consent for AnalyticsIntent to enable data collection.\n\n" +
+                        "As the game developer, you are responsible for the privacy and consent of your players. " +
+                        "Data won't be collected unless you inform the SDK that a player has consented. " +
+                        "See the privacy page:";
+#else
                     m_EventStreamEmptyLabel.text = "You must get consent from the player to collect their data. " +
                         "Once you confirm you have player consent, call <b>AnalyticsService.Instance.StartDataCollection()</b> to enable data collection.\n\n" +
                         "As the game developer, you are responsible for the privacy and consent of your players. " +
                         "Data won't be collected unless you inform the SDK that a player has consented. " +
                         "See the privacy page:";
+#endif
                     m_PrivacyLinkContainer.style.display = DisplayStyle.Flex;
                     break;
                 case DebugState.SdkActive:

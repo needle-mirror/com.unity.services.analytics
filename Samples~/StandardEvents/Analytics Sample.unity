@@ -3070,7 +3070,7 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls:
       - m_Target: {fileID: 1468311338}
-        m_MethodName: RecordSaleTransactionWithOnlyRequiredValues
+        m_MethodName: RecordAcquisitionSourceEventWithOnlyRequiredValues
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -4459,7 +4459,7 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls:
       - m_Target: {fileID: 1468311338}
-        m_MethodName: RecordSaleEventWithOptionalParameters
+        m_MethodName: RecordAcquisitionSourceEventWithOptionalParameters
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}

@@ -4,6 +4,23 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [6.1.0] - 2025-07-29
+
+### Added
+
+* Support for the Developer Data framework in Unity 6.2 and above
+  * This supersedes the StartDataCollection and StopDataCollection methods, which are deprecated in Unity 6.2 and above (they are not deprecated in earlier editor versions that do not have the new EndUserConsent APIs)
+  * In order to start and stop data collection, you must now use EndUserConsent.SetConsentState(...) to grant or deny consent for AnalyticsIntent
+  * In order to request data deletion, you must still use the SDK's RequestDataDeletion method, but you must first explicitly deny consent using the EndUserConsent API
+  * If consent has already been granted, data collection will start automatically during UnityServices.InitializeAsync(). Otherwise, data collection will start when consent is granted
+  * When you start using the EndUserConsent API, the SDK will throw exceptions if you attempt to use methods from the original workflow. The two approaches cannot be mixed
+  * Please see the migration guide for more information: https://docs.unity.com/ugs/en-us/manual/analytics/manual/sdk61-migration-guide
+
+### Fixed
+
+* Updated the Debug Panel to use a new UIToolkit method in Unity 6.2 and above to prevent a deprecation warning
+* The two acquisitionSource event buttons in the Standard Events sample now call the correct methods
+
 ## [6.0.3] - 2025-03-24
 
 ### Fixed

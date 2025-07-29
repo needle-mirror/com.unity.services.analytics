@@ -54,7 +54,6 @@ namespace Unity.Services.Analytics
             var environments = registry.GetServiceComponent<IEnvironments>();
             var customUserId = registry.GetServiceComponent<IExternalUserId>();
 
-            var coreStatsHelper = new CoreStatsHelper();
             var persistence = new PlayerPrefsPersistence();
             var userIdentity = new IdentityManager(installationId, playerId, customUserId, persistence);
             var session = new SessionManager();
@@ -67,18 +66,19 @@ namespace Unity.Services.Analytics
             var containerObject = AnalyticsContainer.CreateContainer();
             var webRequestHelper = new WebRequestHelper();
             var dispatcher = new Dispatcher(webRequestHelper, collectUrl);
+            var consent = new ConsentManager();
 
             m_Instance = new AnalyticsServiceInstance(
                 new DataGenerator(buffer, new CommonDataWrapper(projectId), new DeviceDataWrapper()),
                 buffer,
-                coreStatsHelper,
                 dispatcher,
                 new AnalyticsForgetter(collectUrl, persistence, webRequestHelper),
                 userIdentity,
                 environments.Current,
                 new AnalyticsServiceSystemCalls(),
                 containerObject,
-                session);
+                session,
+                consent);
             containerObject.Initialize(m_Instance);
             m_Instance.ResumeDataDeletionIfNecessary();
 
@@ -91,6 +91,10 @@ namespace Unity.Services.Analytics
                 m_DispatcherDebug.FlushStarted += m_FlushStartedCallback;
                 m_DispatcherDebug.FlushFinished += m_FlushCompletedCallback;
             }
+
+            // NOTE: consent may automatically start data collection, so make sure the Debug Panel has
+            // had a chance to subscribe to the events first!
+            consent.Initialize();
 
             StandardEventServiceComponent standardEventComponent = new StandardEventServiceComponent(
                 registry.GetServiceComponent<IProjectConfiguration>(),

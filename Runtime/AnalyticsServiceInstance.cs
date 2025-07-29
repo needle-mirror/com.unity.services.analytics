@@ -42,8 +42,8 @@ namespace Unity.Services.Analytics
 
         readonly IIdentityManager m_UserIdentity;
         readonly ISessionManager m_Session;
+        readonly IConsentManager m_ConsentManager;
         readonly IDataGenerator m_DataGenerator;
-        readonly ICoreStatsHelper m_CoreStatsHelper;
         readonly IDispatcher m_DataDispatcher;
         readonly IAnalyticsForgetter m_AnalyticsForgetter;
         readonly IAnalyticsServiceSystemCalls m_SystemCalls;
@@ -83,19 +83,18 @@ namespace Unity.Services.Analytics
 
         internal AnalyticsServiceInstance(IDataGenerator dataGenerator,
                                           IBuffer realBuffer,
-                                          ICoreStatsHelper coreStatsHelper,
                                           IDispatcher dispatcher,
                                           IAnalyticsForgetter forgetter,
                                           IIdentityManager userIdentity,
                                           string environment,
                                           IAnalyticsServiceSystemCalls systemCalls,
                                           IAnalyticsContainer container,
-                                          ISessionManager session)
+                                          ISessionManager session,
+                                          IConsentManager consent)
         {
             m_DataGenerator = dataGenerator;
             m_SystemCalls = systemCalls;
 
-            m_CoreStatsHelper = coreStatsHelper;
             m_DataDispatcher = dispatcher;
             m_Container = container;
 
@@ -110,6 +109,10 @@ namespace Unity.Services.Analytics
             m_UserIdentity = userIdentity;
             m_UserIdentity.OnPlayerChanged += PlayerChanged;
             m_Session = session;
+
+            m_ConsentManager = consent;
+            m_ConsentManager.ConsentGranted += Activate;
+            m_ConsentManager.ConsentRevoked += DeactivateWithFlush;
         }
 
         internal void ResumeDataDeletionIfNecessary()
@@ -122,6 +125,21 @@ namespace Unity.Services.Analytics
 
         public void StartDataCollection()
         {
+            if (m_ConsentManager.UsingDataFrameworkFlow)
+            {
+                throw new InvalidOperationException(
+                    "The Analytics SDK is now being controlled by the Developer Data framework. " +
+                    "To enable data collection, grant AnalyticsIntent consent using the EndUserConsent.SetConsentState(...) method.");
+            }
+            else
+            {
+                m_ConsentManager.LockInOriginalFlow();
+                Activate();
+            }
+        }
+
+        void Activate()
+        {
             // The New flow allows "opt out and back in again", so this method can be activated
             // repeatedly within a single session. It should do nothing if the SDK is already
             // active, but otherwise (re)activate the SDK as normal.
@@ -129,16 +147,7 @@ namespace Unity.Services.Analytics
             {
                 // In case you had previously requested data deletion, you must now be able to request it again.
                 m_AnalyticsForgetter.ResetDataDeletionStatus();
-                m_CoreStatsHelper.SetCoreStatsConsent(true);
 
-                Activate();
-            }
-        }
-
-        void Activate()
-        {
-            if (!m_IsActive)
-            {
                 m_IsActive = true;
                 m_Container.Enable();
                 m_DataBuffer.LoadFromDisk();
@@ -152,6 +161,18 @@ namespace Unity.Services.Analytics
 
         public void StopDataCollection()
         {
+            if (m_ConsentManager.UsingDataFrameworkFlow)
+            {
+                throw new InvalidOperationException(
+                    "The Analytics SDK is now being controlled Developer Data framework. " +
+                    "To disable data collection, revoke AnalyticsIntent consent using the EndUserConsent.SetConsentState(...) method.");
+            }
+
+            DeactivateWithFlush();
+        }
+
+        void DeactivateWithFlush()
+        {
             if (m_IsActive)
             {
                 m_DataDispatcher.Flush();
@@ -161,6 +182,15 @@ namespace Unity.Services.Analytics
 
         internal void DeactivateWithDataDeletionRequest()
         {
+            if (m_ConsentManager.UsingDataFrameworkFlow &&
+                m_ConsentManager.DataFrameworkConsentGranted)
+            {
+                throw new InvalidOperationException("You must revoke consent for data collection before requesting data deletion. " +
+                    "Use the EndUserConsent.SetConsentState(...) method to deny consent for AnalyticsIntent before invoking this method.");
+                // else consent is denied and the SDK is already turned off, safe to proceed.
+                // (And we'll never get past the outer m_UsingDataFrameworkFlow check at all if we're still Unspecified.)
+            }
+
             m_DataBuffer.ClearBuffer();
             m_DataBuffer.ClearDiskCache();
             m_Container.Enable();
@@ -191,8 +221,6 @@ namespace Unity.Services.Analytics
                     m_Container.Disable();
                 }
             }
-
-            m_CoreStatsHelper.SetCoreStatsConsent(false);
         }
 
         void RecordStartupEvents(string callingId)
