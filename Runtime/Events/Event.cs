@@ -20,6 +20,7 @@ namespace Unity.Services.Analytics
         private protected readonly Dictionary<string, long> m_Integers;
         private protected readonly Dictionary<string, bool> m_Booleans;
         private protected readonly Dictionary<string, double> m_Floats;
+        private protected readonly Dictionary<string, DateTime> m_Timestamps;
 
         internal readonly string Name;
         internal readonly bool StandardEvent;
@@ -36,6 +37,7 @@ namespace Unity.Services.Analytics
             m_Integers = new Dictionary<string, long>(StringComparer.Ordinal);
             m_Booleans = new Dictionary<string, bool>(StringComparer.Ordinal);
             m_Floats = new Dictionary<string, double>(StringComparer.Ordinal);
+            m_Timestamps = new Dictionary<string, DateTime>(StringComparer.Ordinal);
         }
 
         internal Event(string name, bool standardEvent, int eventVersion) : this(name)
@@ -104,6 +106,16 @@ namespace Unity.Services.Analytics
             m_Floats[name] = value;
         }
 
+        /// <summary>
+        /// Sets a timestamp value for the given parameter name.
+        /// </summary>
+        /// <param name="name">The name of this parameter, as defined in the event schema.</param>
+        /// <param name="value">The value to store for this parameter.</param>
+        protected void SetParameter(string name, DateTime value)
+        {
+            m_Timestamps[name] = value;
+        }
+
         internal virtual void Serialize(IBuffer buffer)
         {
             foreach (KeyValuePair<string, string> kvp in m_Strings)
@@ -124,6 +136,11 @@ namespace Unity.Services.Analytics
             foreach (KeyValuePair<string, bool> kvp in m_Booleans)
             {
                 buffer.PushBool(kvp.Key, kvp.Value);
+            }
+
+            foreach (KeyValuePair<string, DateTime> kvp in m_Timestamps)
+            {
+                buffer.PushTimestamp(kvp.Key, kvp.Value);
             }
         }
 

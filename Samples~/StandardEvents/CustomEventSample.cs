@@ -15,6 +15,7 @@ namespace Unity.Services.Analytics
         public float SpectacularFloat { set { SetParameter("spectacularFloat", value); } }
         public double IncredibleDouble { set { SetParameter("incredibleDouble", value); } }
         public bool PeculiarBool { set { SetParameter("peculiarBool", value); } }
+        public DateTime TickingTimestamp { set { SetParameter("tickingTimestamp", value); } }
     }
 
     public static class CustomEventSample
@@ -37,7 +38,8 @@ namespace Unity.Services.Analytics
                 TremendousLong = Int64.MaxValue,
                 SpectacularFloat = 0.451f,
                 IncredibleDouble = 0.000000000000000031337,
-                PeculiarBool = true
+                PeculiarBool = true,
+                TickingTimestamp = DateTime.Now
             };
 
             AnalyticsService.Instance.RecordEvent(myEvent);

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 namespace Unity.Services.Analytics.Internal
@@ -14,6 +15,7 @@ namespace Unity.Services.Analytics.Internal
         void PushInt64(string name, long value);
         void PushInt(string name, int value);
         void PushBool(string name, bool value);
+        void PushTimestamp(string name, DateTime value);
         void PushObject(string name, object value);
         void PushProduct(string name, TransactionRealCurrency realCurrency, List<TransactionVirtualCurrency> virtualCurrencies, List<TransactionItem> items);
 

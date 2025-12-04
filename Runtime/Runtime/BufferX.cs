@@ -85,6 +85,9 @@ namespace Unity.Services.Analytics.Internal
         readonly byte k_Positive;
         readonly byte k_Negative;
 
+        readonly byte k_DateTimeSeparator;
+        readonly byte k_UtcTimezone;
+
         readonly byte[] k_True;
         readonly byte[] k_False;
         readonly byte[] k_Int2CharacterByte;
@@ -178,6 +181,9 @@ namespace Unity.Services.Analytics.Internal
             k_Positive = Encoding.UTF8.GetBytes("+")[0];
             k_Negative = Encoding.UTF8.GetBytes("-")[0];
 
+            k_DateTimeSeparator = Encoding.UTF8.GetBytes("T")[0];
+            k_UtcTimezone = Encoding.UTF8.GetBytes("Z")[0];
+
             k_True = Encoding.UTF8.GetBytes("true");
             k_False = Encoding.UTF8.GetBytes("false");
             k_Int2CharacterByte = new byte[]
@@ -253,14 +259,15 @@ namespace Unity.Services.Analytics.Internal
 
         private void WriteDateTime(DateTime dateTime)
         {
-            // "yyyy-MM-dd HH:mm:ss.fff zzz"
-            // -> "2023-07-20 11:50:41.023 +01:00"
+            // "yyyy-MM-ddTHH:mm:ss.fffzzz", where zzz is Z for UTC or ±HH:mm
+            // -> "2025-11-10T14:10:51.041Z"
+            // -> "2025-11-10T14:11:51.041+01:00"
             SerializeLong(dateTime.Year, k_WorkingBuffer, 0, 4);
             k_WorkingBuffer[4] = k_Dash;
             SerializeLong(dateTime.Month, k_WorkingBuffer, 5, 2);
             k_WorkingBuffer[7] = k_Dash;
             SerializeLong(dateTime.Day, k_WorkingBuffer, 8, 2);
-            k_WorkingBuffer[10] = k_Space;
+            k_WorkingBuffer[10] = k_DateTimeSeparator;
             SerializeLong(dateTime.Hour, k_WorkingBuffer, 11, 2);
             k_WorkingBuffer[13] = k_Colon;
             SerializeLong(dateTime.Minute, k_WorkingBuffer, 14, 2);
@@ -268,21 +275,29 @@ namespace Unity.Services.Analytics.Internal
             SerializeLong(dateTime.Second, k_WorkingBuffer, 17, 2);
             k_WorkingBuffer[19] = k_Point;
             SerializeLong(dateTime.Millisecond, k_WorkingBuffer, 20, 3);
-            k_WorkingBuffer[23] = k_Space;
 
             // Can we cache the offset? Then, what if DST/etc changes during a session?
             // Can we guarantee that we are always serialising NOW and not some arbitrary date from the past?
             // Answers: no, not really. So always get the offset fresh.
             TimeSpan offset = m_SystemCalls.GetTimeZoneUtcOffset(dateTime);
 
-            // NOTE: timezone offset is all negative or all positive, so we put the symbol in front and
-            // then take the Absolute values of the individual parts.
-            k_WorkingBuffer[24] = offset.Ticks < 0 ? k_Negative : k_Positive;
-            SerializeLong(Mathf.Abs(offset.Hours), k_WorkingBuffer, 25, 2);
-            k_WorkingBuffer[27] = k_Colon;
-            SerializeLong(Mathf.Abs(offset.Minutes), k_WorkingBuffer, 28, 2);
+            if (offset.TotalMinutes == 0)
+            {
+                // UTC is a special case, marked only by a 'Z' rather than plus/minus hours:minutes.
+                k_WorkingBuffer[23] = k_UtcTimezone;
+                m_Buffer.Write(k_WorkingBuffer, 0, 24);
+            }
+            else
+            {
+                // NOTE: timezone offset is all negative or all positive, so we put the symbol in front and
+                // then take the Absolute values of the individual parts.
+                k_WorkingBuffer[23] = offset.Ticks < 0 ? k_Negative : k_Positive;
+                SerializeLong(Mathf.Abs(offset.Hours), k_WorkingBuffer, 24, 2);
+                k_WorkingBuffer[26] = k_Colon;
+                SerializeLong(Mathf.Abs(offset.Minutes), k_WorkingBuffer, 27, 2);
 
-            m_Buffer.Write(k_WorkingBuffer, 0, 30);
+                m_Buffer.Write(k_WorkingBuffer, 0, 29);
+            }
         }
 
         /// <summary>

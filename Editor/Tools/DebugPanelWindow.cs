@@ -431,7 +431,11 @@ namespace Unity.Services.Analytics.Editor
                         }
                         break;
                     case ':':
-                        prettyPrintBuffer.Append(": ");
+                        prettyPrintBuffer.Append(minifiedJson[i]);
+                        if (!stringOpen)
+                        {
+                            prettyPrintBuffer.Append(' ');
+                        }
                         break;
                     case '{':
                     case '[':

@@ -67,6 +67,10 @@ namespace Unity.Services.Analytics
             {
                 SetParameter(key, (bool)value);
             }
+            else if (type == typeof(DateTime))
+            {
+                SetParameter(key, (DateTime)value);
+            }
             else
             {
                 throw new ArgumentException($"Values of type {type} cannot be included as event parameters.");
@@ -96,6 +100,10 @@ namespace Unity.Services.Analytics
                 yield return new KeyValuePair<string, object>(kvp.Key, kvp.Value);
             }
             foreach (KeyValuePair<string, bool> kvp in m_Booleans)
+            {
+                yield return new KeyValuePair<string, object>(kvp.Key, kvp.Value);
+            }
+            foreach (KeyValuePair<string, DateTime> kvp in m_Timestamps)
             {
                 yield return new KeyValuePair<string, object>(kvp.Key, kvp.Value);
             }
