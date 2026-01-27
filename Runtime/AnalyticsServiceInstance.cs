@@ -265,6 +265,8 @@ namespace Unity.Services.Analytics
             if (paused)
             {
                 m_ApplicationPauseTime = m_SystemCalls.UtcNow;
+                m_DataBuffer.FlushToDisk();
+
 #if UNITY_ANALYTICS_DEVELOPMENT
                 Debug.Log("Analytics SDK detected application pause at: " + m_ApplicationPauseTime.ToString());
 #endif
