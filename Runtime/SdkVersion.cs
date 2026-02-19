@@ -10,6 +10,6 @@ namespace Unity.Services.Analytics
         /// This value should always match what is in the package.json file for this package,
         /// to provide accurate SDK versions to the analytics data classes.
         /// </summary>
-        public static readonly string SDK_VERSION = "6.2.1";
+        public static readonly string SDK_VERSION = "6.2.2";
     }
 }
