@@ -117,9 +117,10 @@ namespace Unity.Services.Analytics.Data
                     return "MAC_CLIENT";
                 case RuntimePlatform.WindowsEditor:
                 case RuntimePlatform.WindowsPlayer:
+                    return "PC_CLIENT";
                 case RuntimePlatform.LinuxEditor:
                 case RuntimePlatform.LinuxPlayer:
-                    return "PC_CLIENT";
+                    return "LINUX_CLIENT";
                 case RuntimePlatform.IPhonePlayer:
                     return "IOS";
                 case RuntimePlatform.Android:
@@ -140,6 +141,14 @@ namespace Unity.Services.Analytics.Data
                     return "IOS_TV";
                 case RuntimePlatform.Switch:
                     return "SWITCH";
+                case RuntimePlatform.VisionOS:
+                    return "VISION_OS";
+                case RuntimePlatform.PS5:
+                    return "PS5";
+#if UNITY_6000_0_OR_NEWER
+                case RuntimePlatform.Switch2:
+                    return "SWITCH2";
+#endif
                 default:
                     return "UNKNOWN";
             }

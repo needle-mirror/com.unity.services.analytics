@@ -1,7 +1,7 @@
 {
   "name": "com.unity.services.analytics",
   "displayName": "Analytics",
-  "version": "6.2.2",
+  "version": "6.3.0",
   "unity": "2022.3",
   "description": "The Unity Analytics package automatically collects core events and user properties when someone uses your game or application, and enables you to track specific in-game actions your user performs by defining custom events. The data collected from this package is surfaced in the Unity dashboard where you can use it to gather user insights, segment your player base and make informed decisions around the optimization of your game.",
   "dependencies": {
@@ -33,18 +33,18 @@
       "Windows 10 Universal",
       "WebGL"
     ],
-    "changelog": "### Fixed\n\n* The SDK no longer throws exceptions when there is a problem writing the event cache file to disk"
+    "changelog": "### Changed\n\n* The standard event `platform` parameter has been extended to report additional platforms:\n  * LinuxEditor and LinuxPlayer are reported as LINUX_CLIENT instead of PC_CLIENT\n  * PS5 is reported PS5 instead of UNKNOWN\n  * VisionOS is reported VISION_OS instead of UNKNOWN\n  * Switch2 is reported SWITCH2 instead of UNKNOWN (in Unity 6.0 and newer)\n\n### Fixed\n\n* The Analytics SDK now functions correctly in the editor when entering/leaving Play Mode with domain reload disabled\n* The Analytics Debug Panel now correctly displays recorded events if opened after entering Play Mode"
   },
   "relatedPackages": {
-    "com.unity.services.analytics.tests": "6.2.2"
+    "com.unity.services.analytics.tests": "6.3.0"
   },
   "upmCi": {
-    "footprint": "6ff757bd504216528844cc8e9bebc1245a8b19c7"
+    "footprint": "522ba38b6eb89f1d69166341f26acb9a79e33dba"
   },
-  "documentationUrl": "https://docs.unity3d.com/Packages/com.unity.services.analytics@6.2/manual/index.html",
+  "documentationUrl": "https://docs.unity3d.com/Packages/com.unity.services.analytics@6.3/manual/index.html",
   "repository": {
     "url": "https://github.cds.internal.unity3d.com/unity/operate-services-sdk.git",
     "type": "git",
-    "revision": "33cd24d86f6488f30772738d87830acc13b46c7b"
+    "revision": "ec4175759cbb48849d7a869beb16de4439620aab"
   }
 }

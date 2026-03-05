@@ -119,10 +119,25 @@ namespace Unity.Services.Analytics.Editor
             Button copyToClipboard = rootVisualElement.Q<Button>("payload-copy-button");
             copyToClipboard.clicked += CopyToClipboard;
 
-            AnalyticsService.SubscribeDebugEvents(EventRecorded, EventsUploading, FlushStarted, FlushCompleted);
+            EditorApplication.playModeStateChanged += SubscribeDebugEvents;
             EditorApplication.update += UpdateLoop;
 
+            // If we are already in Play Mode when the window opens, make sure we subscribe to the events
+            // immediately as well as setting up the playModeStateChanged subscription for subsequent updates.
+            if (EditorApplication.isPlaying)
+            {
+                SubscribeDebugEvents(PlayModeStateChange.EnteredPlayMode);
+            }
+
             m_Model.Initialize();
+        }
+
+        void SubscribeDebugEvents(PlayModeStateChange s)
+        {
+            if (s == PlayModeStateChange.EnteredPlayMode)
+            {
+                AnalyticsService.SubscribeDebugEvents(EventRecorded, EventsUploading, FlushStarted, FlushCompleted);
+            }
         }
 
         void OpenDashboardLink()

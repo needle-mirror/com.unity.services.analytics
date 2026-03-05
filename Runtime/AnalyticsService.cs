@@ -157,6 +157,10 @@ namespace Unity.Services.Analytics
                 m_DispatcherDebug.FlushFinished -= m_FlushCompletedCallback;
             }
 
+            m_EventRecordedCallback = null;
+            m_EventsClearingCallback = null;
+            m_FlushStartedCallback = null;
+            m_FlushCompletedCallback = null;
             m_Instance = null;
             m_DispatcherDebug = null;
             m_BufferDebug = null;

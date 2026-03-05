@@ -4,6 +4,21 @@ All notable changes to this package will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## [6.3.0] - 2026-03-05
+
+### Changed
+
+* The standard event `platform` parameter has been extended to report additional platforms:
+  * LinuxEditor and LinuxPlayer are reported as LINUX_CLIENT instead of PC_CLIENT
+  * PS5 is reported PS5 instead of UNKNOWN
+  * VisionOS is reported VISION_OS instead of UNKNOWN
+  * Switch2 is reported SWITCH2 instead of UNKNOWN (in Unity 6.0 and newer)
+
+### Fixed
+
+* The Analytics SDK now functions correctly in the editor when entering/leaving Play Mode with domain reload disabled
+* The Analytics Debug Panel now correctly displays recorded events if opened after entering Play Mode
+
 ## [6.2.2] - 2026-02-19
 
 ### Fixed

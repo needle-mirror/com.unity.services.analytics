@@ -15,6 +15,7 @@ namespace Unity.Services.Analytics
         event Action ConsentRevoked;
 
         void LockInOriginalFlow();
+        void TearDown();
     }
 
     internal class ConsentManager : IConsentManager
@@ -85,10 +86,19 @@ namespace Unity.Services.Analytics
             }
         }
 
+        public void TearDown()
+        {
+            EndUserConsent.consentStateChanged -= DataFrameworkConsentChanged;
+        }
+
 #else
         internal void Initialize()
         {
             LockInOriginalFlow();
+        }
+
+        public void TearDown()
+        {
         }
 
 #endif

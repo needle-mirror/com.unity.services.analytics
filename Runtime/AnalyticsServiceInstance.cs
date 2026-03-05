@@ -321,6 +321,10 @@ namespace Unity.Services.Analytics
                 Flush();
             }
 
+            // The consent manager subscribes to EndUserConsent events in modern Unity, which must be
+            // unsubscribed to support editor sessions with domain reload disabled.
+            m_ConsentManager.TearDown();
+
             // If we are quitting merely as part of returning to Edit Mode in the editor,
             // we still need to clear up the static accessor(s).
             AnalyticsService.TearDown();

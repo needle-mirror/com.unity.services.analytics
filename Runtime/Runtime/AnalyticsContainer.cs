@@ -53,7 +53,11 @@ namespace Unity.Services.Analytics
                 DontDestroyOnLoad(s_Container);
                 s_Created = true;
 
+#if UNITY_EDITOR
+                UnityEditor.EditorApplication.playModeStateChanged += EditorCleanUp;
+#else
                 Application.quitting += m_Instance.CleanUp;
+#endif
             }
 
             return m_Instance;
@@ -102,12 +106,25 @@ namespace Unity.Services.Analytics
             m_Service.ApplicationPaused(paused);
         }
 
+#if UNITY_EDITOR
+        static void EditorCleanUp(UnityEditor.PlayModeStateChange s)
+        {
+            if (s == UnityEditor.PlayModeStateChange.ExitingPlayMode)
+            {
+                m_Instance.CleanUp();
+                UnityEditor.EditorApplication.playModeStateChanged -= EditorCleanUp;
+            }
+        }
+
+#endif
+
         void CleanUp()
         {
             Application.quitting -= m_Instance.CleanUp;
 
             m_Service.ApplicationQuit();
 
+            m_Instance = null;
             s_Container = null;
             s_Created = false;
         }
